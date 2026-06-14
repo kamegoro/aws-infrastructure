@@ -5,8 +5,8 @@ module "network" {
   container_port = var.container_port
 }
 
-module "frontend" {
-  source = "../../modules/frontend"
+module "static_site" {
+  source = "../../modules/static-site"
 
   name        = var.name
   bucket_name = var.frontend_bucket_name

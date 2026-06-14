@@ -3,11 +3,11 @@ output "vpc_id" {
 }
 
 output "frontend_bucket_name" {
-  value = module.frontend.bucket_name
+  value = module.static_site.bucket_name
 }
 
 output "frontend_distribution_domain_name" {
-  value = module.frontend.distribution_domain_name
+  value = module.static_site.distribution_domain_name
 }
 
 output "alb_dns_name" {
