@@ -1,26 +1,19 @@
 services:
-  localstack:
-    image: localstack/localstack:4.14.0
-    container_name: aws-infra-localstack
+  ministack:
+    image: ministackorg/ministack:1.3.63
+    container_name: aws-infra-ministack
     ports:
       - "4566:4566" # edge port (all AWS APIs)
-      - "4510-4559:4510-4559" # external service port range (ECS task containers etc.)
     environment:
-      # Free LocalStack account token. Without it, ECS/CloudFront emulation is
-      # unavailable and only core services (S3, IAM, EC2/VPC, etc.) work.
-      # See: https://docs.localstack.cloud/getting-started/auth-token/
-      - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN:-}
-      - DEBUG=${DEBUG:-0}
-      - PERSISTENCE=1
-      - DOCKER_HOST=unix:///var/run/docker.sock
-      # Allow ECS tasks (containers) started by LocalStack to reach the
-      # LocalStack API itself.
-      - LOCALSTACK_HOST=localhost.localstack.cloud
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - PERSIST_STATE=1
+      - DOCKER_NETWORK=aws-infrastructure_default
     volumes:
-      - "./.localstack/volume:/var/lib/localstack"
+      - "./.localstack/volume/state:/tmp/ministack-state"
+      - "./.localstack/volume/s3:/tmp/ministack-data/s3"
       - "/var/run/docker.sock:/var/run/docker.sock"
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:4566/_localstack/health"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4566/_ministack/health')"]
       interval: 5s
       timeout: 5s
       retries: 20
