@@ -6,3 +6,4 @@ crash.*.log
 *.tfvars.local
 .env
 .localstack/
+modules/*/.terraform.lock.hcl
