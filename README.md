@@ -36,6 +36,9 @@ terraform/
     api/       ECS Fargate + ALB でのAPI配信
   envs/
     local/     上記モジュールをまとめてMiniStack向けにワイヤリング
+    dev/       実AWS向け（開発環境）の骨格
+    stg/       実AWS向け（ステージング環境）の骨格
+    prod/      実AWS向け（本番環境）の骨格
 ```
 
 `envs/local/providers.tf` には [`tflocal`](https://github.com/localstack/terraform-local)
@@ -43,9 +46,10 @@ terraform/
 MiniStackはLocalStackと同じエンドポイント形式をエミュレートするため、
 `tflocal` コマンドは不要で、通常の `terraform` コマンドのみで動作します。
 
-将来 `envs/prod` のような実AWS向けの環境を追加する場合は、`envs/local/main.tf` の
-モジュール呼び出しをコピーし、`providers.tf` を通常の `provider "aws" {}` に
-置き換えてください。
+`envs/dev` / `envs/stg` / `envs/prod` は実AWSに接続するための骨格で、
+`providers.tf` は通常の `provider "aws" {}`、`variables.tf` には
+環境ごとの命名（`task-canvas-dev` 等）をデフォルト値として設定しています。
+認証情報はAWS_PROFILE等の環境変数、もしくはCI/CDのOIDC連携で渡す想定です。
 
 ## セットアップ
 
