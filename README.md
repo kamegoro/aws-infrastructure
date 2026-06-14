@@ -116,13 +116,3 @@ cd terraform/envs/local
 terraform state rm module.frontend.aws_s3_bucket_public_access_block.frontend
 terraform destroy
 ```
-
-## CI
-
-`.github/workflows/terraform.yml` で、`terraform/` 配下が変更された
-push/pull_requestごとに以下を実行しています。
-
-- `terraform fmt -check -recursive`
-- 各モジュール・envに対する `terraform init -backend=false && terraform validate`
-- MiniStackに対する `envs/local` 全体の `terraform plan` / `apply` / `destroy`
-  （上記のPublic Access Blockの回避を含む）
