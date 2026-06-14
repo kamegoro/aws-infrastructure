@@ -15,25 +15,67 @@ AWS互換APIに対して `terraform apply` できるようにしています。
 ## アーキテクチャ
 
 API（ECS Fargate + ALB）とフロントエンド（S3 + CloudFront）を、同一VPC内で
-管理する構成を想定しています。
+管理する構成を想定しています（`terraform/envs/local`の構成）。
 
+```mermaid
+flowchart TB
+    Internet((Internet))
+
+    subgraph VPC
+        CloudFront["CloudFront\n(static-site)"]
+        S3[("S3\nfrontend assets")]
+
+        subgraph Public Subnet
+            ALB["ALB\n(fargate-service)"]
+        end
+
+        subgraph Private Subnet
+            ECS["ECS Fargate\n(fargate-service)"]
+            RDS[("RDS PostgreSQL\n(database)")]
+            Secrets["Secrets Manager\n(secrets)\nJWT_SECRET / POSTGRES_PASSWORD"]
+        end
+    end
+
+    Internet --> CloudFront
+    Internet --> ALB
+    CloudFront --> S3
+    ALB --> ECS
+    ECS -- "POSTGRES_HOST 等" --> RDS
+    Secrets -. "ECSタスクへ注入" .-> ECS
 ```
-                         Internet
-                            |
-              +-------------------------+
-              |           VPC            |
-              |                          |
-  CloudFront--+--> S3 (frontend assets)  |
-              |                          |
-              |  ALB (public subnet)     |
-              |    |                     |
-              |  ECS Fargate (api)       |
-              |    (private subnet)      |
-              |    |                     |
-              |  RDS (PostgreSQL)        |
-              |    (private subnet)      |
-              +--------------------------+
+
+| コンポーネント | モジュール | 役割 |
+| --- | --- | --- |
+| CloudFront + S3 | `static-site` | フロントエンド（task-canvasのビルド資産）の配信 |
+| ALB + ECS Fargate | `fargate-service` | task-canvasのbackend APIの実行 |
+| RDS (PostgreSQL) | `database` | task-canvasが利用するデータベース |
+| Secrets Manager | `secrets` | `JWT_SECRET`・DBパスワードをECSタスクに注入 |
+| VPC / サブネット / SG | `network` | 上記すべてのネットワーク基盤 |
+
+## 関連リポジトリ
+
+task-canvasのアプリケーション本体・E2Eテスト・現状の開発環境とは、
+それぞれ以下のように連携しています。
+
+```mermaid
+flowchart LR
+    TC["task-canvas\nfrontend (Next.js) + backend (Go)"]
+    AWSINFRA["aws-infrastructure\nTerraform / MiniStack (このリポジトリ)"]
+    E2E["task-canvas-e2e\nKotlin + Gauge"]
+    K8S["k8s-infrastructure\n開発用DB等"]
+
+    TC -- "backend/frontendの\nコンテナイメージ・ビルド資産" --> AWSINFRA
+    AWSINFRA -- "ALB / CloudFront / RDSの\nエンドポイント" --> E2E
+    E2E -- "E2Eテストを実行" --> TC
+    TC -. "現状の開発時に参照\n(本リポジトリの対象外)" .-> K8S
 ```
+
+- **task-canvas**: フロントエンド・backendの実装本体。本リポジトリは
+  そのコンテナイメージ・ビルド資産を受け取ってAWS互換環境にデプロイする
+- **task-canvas-e2e**: 本リポジトリがMiniStack上に構築した環境
+  （ALB/CloudFront/RDSのエンドポイント）に対してE2Eテストを実行する
+- **k8s-infrastructure**: task-canvasの現状の開発で参照しているDB等の環境。
+  本リポジトリが目指すAWS本番相当構成とは別系統
 
 ## 構成
 
