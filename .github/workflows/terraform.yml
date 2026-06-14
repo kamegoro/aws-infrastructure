@@ -41,3 +41,36 @@ jobs:
         run: |
           terraform init -backend=false
           terraform validate
+
+  localstack:
+    name: terraform plan/apply (LocalStack)
+    runs-on: ubuntu-latest
+    services:
+      localstack:
+        image: localstack/localstack:4.14.0
+        ports:
+          - 4566:4566
+        options: >-
+          --health-cmd "curl -sf http://localhost:4566/_localstack/health"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.15.6"
+
+      - name: terraform plan
+        working-directory: terraform/envs/local
+        run: |
+          terraform init
+          terraform plan
+
+      # frontend/api (CloudFront/ECS/ELBv2) are not available on LocalStack
+      # Community edition, so only the network module is applied here.
+      - name: apply/destroy network module against LocalStack
+        working-directory: terraform/envs/local
+        run: |
+          terraform apply -target=module.network -auto-approve
+          terraform destroy -target=module.network -auto-approve
