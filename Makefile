@@ -1,6 +1,4 @@
-ENV_DIR := terraform/envs/local
-
-.PHONY: up down logs init plan apply destroy fmt validate output
+.PHONY: up down logs
 
 ## Start LocalStack
 up:
@@ -16,24 +14,3 @@ down:
 ## Follow LocalStack logs
 logs:
 	docker compose logs -f localstack
-
-init:
-	terraform -chdir=$(ENV_DIR) init
-
-plan:
-	terraform -chdir=$(ENV_DIR) plan
-
-apply:
-	terraform -chdir=$(ENV_DIR) apply
-
-destroy:
-	terraform -chdir=$(ENV_DIR) destroy
-
-fmt:
-	terraform fmt -recursive
-
-validate:
-	terraform -chdir=$(ENV_DIR) validate
-
-output:
-	terraform -chdir=$(ENV_DIR) output
