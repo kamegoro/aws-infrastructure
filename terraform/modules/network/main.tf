@@ -142,6 +142,14 @@ resource "aws_security_group" "ecs_service" {
   description = "Allow inbound traffic from the ALB to ECS tasks"
   vpc_id      = aws_vpc.main.id
 
+  ingress {
+    description     = "Container port from the ALB"
+    from_port       = var.container_port
+    to_port         = var.container_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -152,13 +160,4 @@ resource "aws_security_group" "ecs_service" {
   tags = {
     Name = "${var.name}-ecs-service"
   }
-}
-
-resource "aws_security_group_rule" "ecs_from_alb" {
-  type                     = "ingress"
-  from_port                = var.container_port
-  to_port                  = var.container_port
-  protocol                 = "tcp"
-  security_group_id        = aws_security_group.ecs_service.id
-  source_security_group_id = aws_security_group.alb.id
 }
