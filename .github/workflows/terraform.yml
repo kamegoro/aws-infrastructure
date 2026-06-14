@@ -20,7 +20,8 @@ jobs:
       - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "1.15.6"
-      - run: terraform fmt -check -recursive terraform
+      - name: terraform fmtチェック
+        run: terraform fmt -check -recursive terraform
 
   validate:
     name: terraform validate (${{ matrix.dir }})
@@ -37,10 +38,12 @@ jobs:
       - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "1.15.6"
-      - working-directory: ${{ matrix.dir }}
-        run: |
-          terraform init -backend=false
-          terraform validate
+      - name: terraform init
+        working-directory: ${{ matrix.dir }}
+        run: terraform init -backend=false
+      - name: terraform validate
+        working-directory: ${{ matrix.dir }}
+        run: terraform validate
 
   ministack:
     name: terraform plan/apply (MiniStack)
@@ -63,19 +66,19 @@ jobs:
         with:
           terraform_version: "1.15.6"
 
-      - name: terraform plan
+      - name: MiniStackに対してplan
         working-directory: terraform/envs/local
         run: |
           terraform init
           terraform plan
 
-      - name: apply full environment against MiniStack
+      - name: MiniStackに対してフル環境をapply
         working-directory: terraform/envs/local
         run: terraform apply -auto-approve
 
       # MiniStack 1.3.63のバグ回避 (https://github.com/ministackorg/ministack/issues/915)
       # destroy前にPublic Access Blockをstateから外し、destroy-waiterのタイムアウトを防ぐ
-      - name: destroy full environment against MiniStack
+      - name: MiniStackのフル環境をdestroy
         working-directory: terraform/envs/local
         run: |
           terraform state rm module.static_site.aws_s3_bucket_public_access_block.frontend
