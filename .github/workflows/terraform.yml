@@ -29,7 +29,7 @@ jobs:
       matrix:
         dir:
           - terraform/modules/network
-          - terraform/modules/frontend
+          - terraform/modules/static-site
           - terraform/modules/api
           - terraform/envs/local
     steps:
@@ -78,5 +78,5 @@ jobs:
       - name: destroy full environment against MiniStack
         working-directory: terraform/envs/local
         run: |
-          terraform state rm module.frontend.aws_s3_bucket_public_access_block.frontend
+          terraform state rm module.static_site.aws_s3_bucket_public_access_block.frontend
           terraform destroy -auto-approve
