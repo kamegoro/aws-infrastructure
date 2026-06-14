@@ -12,6 +12,16 @@ module "static_site" {
   bucket_name = var.frontend_bucket_name
 }
 
+module "database" {
+  source = "../../modules/database"
+
+  name = var.name
+
+  vpc_id                    = module.network.vpc_id
+  private_subnet_ids        = module.network.private_subnet_ids
+  allowed_security_group_id = module.network.ecs_service_security_group_id
+}
+
 module "fargate_service" {
   source = "../../modules/fargate-service"
 
@@ -25,4 +35,11 @@ module "fargate_service" {
 
   container_image = var.container_image
   container_port  = var.container_port
+
+  environment = {
+    POSTGRES_HOST = module.database.endpoint
+    POSTGRES_PORT = tostring(module.database.port)
+    POSTGRES_DB   = module.database.db_name
+    POSTGRES_USER = module.database.username
+  }
 }
