@@ -1,0 +1,57 @@
+# このリポジトリで使用するラベルの定義。
+#
+# 新しいラベルを追加・変更した場合は、`gh label create/edit`で実際の
+# リポジトリにも反映し、この一覧を更新する。
+#
+# 種類 (Issue/PRの分類)
+- name: feature
+  description: 新機能・改善
+  color: "0e8a16"
+- name: bug
+  description: Something isn't working
+  color: "d73a4a"
+- name: chore
+  description: 雑務・ツール更新など
+  color: "fef2c0"
+- name: docs
+  description: ドキュメントの追加・更新
+  color: "0075ca"
+- name: ci
+  description: CI/CD関連
+  color: "1d76db"
+- name: umbrella
+  description: 複数のサブissueに分割されるumbrella issue
+  color: "5319e7"
+
+# 優先度
+- name: "priority: high"
+  description: "優先度: 高"
+  color: "b60205"
+- name: "priority: medium"
+  description: "優先度: 中"
+  color: "fbca04"
+- name: "priority: low"
+  description: "優先度: 低"
+  color: "c2e0c6"
+
+# 状態 (issue #63 の自動化workflowが使用する)
+- name: auto-merge-approved
+  description: Claudeのレビューにより自動マージを承認(#66)
+  color: "0e8a16"
+- name: needs-human-review
+  description: 人間によるレビューが必要
+  color: "d93f0b"
+- name: reviewed-by-claude
+  description: Claudeによるセカンドレビュー済み(#70)
+  color: "c5def5"
+- name: claude-ready
+  description: Claudeによる実装(issue-to-PR)対象(#68)
+  color: "bfd4f2"
+
+# Dependabotが自動付与するラベル（GitHubデフォルト）
+- name: dependencies
+  description: Pull requests that update a dependency file
+  color: "0366d6"
+- name: github_actions
+  description: Pull requests that update GitHub Actions code
+  color: "000000"
