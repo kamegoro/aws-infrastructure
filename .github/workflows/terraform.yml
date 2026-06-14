@@ -35,6 +35,9 @@ jobs:
           - terraform/modules/database
           - terraform/modules/secrets
           - terraform/envs/local
+          - terraform/envs/dev
+          - terraform/envs/stg
+          - terraform/envs/prod
     steps:
       - uses: actions/checkout@v6
       - uses: hashicorp/setup-terraform@v4
