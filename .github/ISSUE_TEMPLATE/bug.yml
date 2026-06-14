@@ -1,0 +1,49 @@
+name: 不具合
+description: Terraform/MiniStack/CIなどの不具合を報告する
+title: ""
+labels:
+  - bug
+body:
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景
+      description: 発生している現象
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現手順
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待する動作
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 実際の動作
+    validations:
+      required: true
+  - type: dropdown
+    id: tool-side
+    attributes:
+      label: ツール側(MiniStack等)の問題が疑われるか
+      description: CLAUDE.mdの「トラブル発生時の振る舞い」を参照
+      options:
+        - 未調査
+        - このリポジトリのコード/設定の問題
+        - MiniStack等の外部ツールの問題が疑われる
+    validations:
+      required: true
+  - type: textarea
+    id: related
+    attributes:
+      label: 関連
+      description: 関連するissue/PR、上流issueなど
+    validations:
+      required: false

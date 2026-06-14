@@ -1,0 +1,38 @@
+name: Umbrella issue
+description: 複数のサブissueに分割される大きな変更
+title: "[umbrella] "
+labels:
+  - umbrella
+body:
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景
+      description: なぜこの変更が必要か
+    validations:
+      required: true
+  - type: textarea
+    id: overview
+    attributes:
+      label: 全体像
+      description: どのような構成・流れになるか
+    validations:
+      required: false
+  - type: textarea
+    id: sub-issues
+    attributes:
+      label: サブissue
+      description: |
+        分割するサブissueの一覧（作成後、GitHubのSub-issues機能で
+        このissueの子issueとして登録する）
+      value: |
+        - [ ]
+    validations:
+      required: false
+  - type: textarea
+    id: related
+    attributes:
+      label: 関連
+      description: 関連するissue/PRなど
+    validations:
+      required: false
