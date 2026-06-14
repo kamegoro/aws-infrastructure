@@ -12,6 +12,12 @@ module "static_site" {
   bucket_name = var.frontend_bucket_name
 }
 
+module "ecr" {
+  source = "../../modules/ecr"
+
+  name = var.name
+}
+
 module "database" {
   source = "../../modules/database"
 

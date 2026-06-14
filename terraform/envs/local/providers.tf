@@ -17,6 +17,7 @@ provider "aws" {
     cloudfront             = "http://localhost:4566"                     # static-site
     cloudwatchlogs         = "http://localhost:4566"                     # fargate-service（ロググループ）
     ec2                    = "http://localhost:4566"                     # network（VPC/Subnet/SG/IGW/NAT/EIP）
+    ecr                    = "http://localhost:4566"                     # ecr（task-canvasバックエンドイメージ）
     ecs                    = "http://localhost:4566"                     # fargate-service
     elasticloadbalancing   = "http://localhost:4566"                     # fargate-service（ALB）
     elasticloadbalancingv2 = "http://localhost:4566"                     # fargate-service（ALB）

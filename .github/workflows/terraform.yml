@@ -34,6 +34,7 @@ jobs:
           - terraform/modules/fargate-service
           - terraform/modules/database
           - terraform/modules/secrets
+          - terraform/modules/ecr
           - terraform/envs/local
     steps:
       - uses: actions/checkout@v6
