@@ -33,6 +33,10 @@ resource "aws_ecs_task_definition" "api" {
         for key, value in var.environment : { name = key, value = value }
       ]
 
+      secrets = [
+        for key, arn in var.secrets : { name = key, valueFrom = arn }
+      ]
+
       logConfiguration = {
         logDriver = "awslogs"
         options = {

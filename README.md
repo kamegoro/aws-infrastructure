@@ -44,6 +44,7 @@ terraform/
     static-site/     S3 + CloudFront (OAC) での静的サイト配信
     fargate-service/ ECS Fargate + ALB でのAPI配信
     database/        RDS (PostgreSQL) でのデータベース
+    secrets/         Secrets ManagerでのJWT_SECRET・DB認証情報の管理
   envs/
     local/     上記モジュールをまとめてMiniStack向けにワイヤリング
     dev/       実AWS向け（開発環境）の骨格
@@ -98,8 +99,8 @@ make down
 ## MiniStackについて
 
 [MiniStack](https://github.com/ministackorg/ministack) はLocalStack互換の
-AWSエミュレータで、MITライセンスでサインアップ不要、`network`/`static-site`/`fargate-service`/`database`
-すべてのモジュールが利用するサービス（VPC/SG、S3、CloudFront、ECS、ELBv2、RDS）を
+AWSエミュレータで、MITライセンスでサインアップ不要、`network`/`static-site`/`fargate-service`/`database`/`secrets`
+すべてのモジュールが利用するサービス（VPC/SG、S3、CloudFront、ECS、ELBv2、RDS、Secrets Manager）を
 無料でエミュレートします。ECSタスク・RDSインスタンスはホストのDocker socketを
 使って実際のコンテナとして起動されます。
 
@@ -109,6 +110,7 @@ AWSエミュレータで、MITライセンスでサインアップ不要、`netw
 | `static-site` | ✅ | ✅ |
 | `fargate-service` | ✅ | ✅ |
 | `database` | ✅ | ✅ |
+| `secrets` | ✅ | ✅ |
 | `envs/local`（全体） | ✅ | ✅ |
 
 ```sh
