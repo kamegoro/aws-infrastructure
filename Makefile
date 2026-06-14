@@ -2,20 +2,20 @@ TF_DIR := terraform/envs/local
 
 .PHONY: up down logs tf-init tf-plan tf-apply tf-destroy tf-fmt tf-validate tf-output
 
-## Start LocalStack
+## Start MiniStack
 up:
 	docker compose up -d
-	@echo "Waiting for LocalStack to be healthy..."
-	@until [ "$$(docker inspect -f '{{.State.Health.Status}}' aws-infra-localstack 2>/dev/null)" = "healthy" ]; do sleep 2; done
-	@echo "LocalStack is ready."
+	@echo "Waiting for MiniStack to be healthy..."
+	@until [ "$$(docker inspect -f '{{.State.Health.Status}}' aws-infra-ministack 2>/dev/null)" = "healthy" ]; do sleep 2; done
+	@echo "MiniStack is ready."
 
-## Stop LocalStack (keeps state under .localstack/)
+## Stop MiniStack (keeps state under .localstack/)
 down:
 	docker compose down
 
-## Follow LocalStack logs
+## Follow MiniStack logs
 logs:
-	docker compose logs -f localstack
+	docker compose logs -f ministack
 
 ## Initialize the local Terraform environment
 tf-init:
@@ -25,7 +25,7 @@ tf-init:
 tf-plan:
 	cd $(TF_DIR) && terraform plan
 
-## Apply the local environment against LocalStack
+## Apply the local environment against MiniStack
 tf-apply:
 	cd $(TF_DIR) && terraform apply
 
