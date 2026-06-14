@@ -63,30 +63,6 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-# --- NATゲートウェイ（任意。実AWSでは費用が発生する） ---
-
-resource "aws_eip" "nat" {
-  count  = var.enable_nat_gateway ? 1 : 0
-  domain = "vpc"
-
-  tags = {
-    Name = "${var.name}-nat"
-  }
-}
-
-resource "aws_nat_gateway" "main" {
-  count = var.enable_nat_gateway ? 1 : 0
-
-  allocation_id = aws_eip.nat[0].id
-  subnet_id     = aws_subnet.public[0].id
-
-  tags = {
-    Name = "${var.name}-nat"
-  }
-
-  depends_on = [aws_internet_gateway.main]
-}
-
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
 
@@ -108,56 +84,4 @@ resource "aws_route_table_association" "private" {
 
   subnet_id      = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.private.id
-}
-
-# --- セキュリティグループ ---
-
-resource "aws_security_group" "alb" {
-  name        = "${var.name}-alb"
-  description = "Allow inbound HTTP to the ALB"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    description = "HTTP from anywhere"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "${var.name}-alb"
-  }
-}
-
-resource "aws_security_group" "ecs_service" {
-  name        = "${var.name}-ecs-service"
-  description = "Allow inbound traffic from the ALB to ECS tasks"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    description     = "Container port from the ALB"
-    from_port       = var.container_port
-    to_port         = var.container_port
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "${var.name}-ecs-service"
-  }
 }
