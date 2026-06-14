@@ -12,8 +12,8 @@ module "static_site" {
   bucket_name = var.frontend_bucket_name
 }
 
-module "api" {
-  source = "../../modules/api"
+module "fargate_service" {
+  source = "../../modules/fargate-service"
 
   name = var.name
 

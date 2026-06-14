@@ -30,7 +30,7 @@ jobs:
         dir:
           - terraform/modules/network
           - terraform/modules/static-site
-          - terraform/modules/api
+          - terraform/modules/fargate-service
           - terraform/envs/local
     steps:
       - uses: actions/checkout@v6
