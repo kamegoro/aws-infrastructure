@@ -14,28 +14,15 @@ provider "aws" {
   skip_requesting_account_id  = true
 
   endpoints {
-    acm                    = "http://localhost:4566"
-    apigateway             = "http://localhost:4566"
-    cloudformation         = "http://localhost:4566"
-    cloudfront             = "http://localhost:4566"
-    cloudwatch             = "http://localhost:4566"
-    cloudwatchlogs         = "http://localhost:4566"
-    dynamodb               = "http://localhost:4566"
-    ec2                    = "http://localhost:4566"
-    ecr                    = "http://localhost:4566"
-    ecs                    = "http://localhost:4566"
-    elasticloadbalancing   = "http://localhost:4566"
-    elasticloadbalancingv2 = "http://localhost:4566"
-    iam                    = "http://localhost:4566"
-    lambda                 = "http://localhost:4566"
-    rds                    = "http://localhost:4566"
-    route53                = "http://localhost:4566"
-    s3                     = "http://s3.localhost.localstack.cloud:4566"
-    secretsmanager         = "http://localhost:4566"
-    ses                    = "http://localhost:4566"
-    sns                    = "http://localhost:4566"
-    sqs                    = "http://localhost:4566"
-    ssm                    = "http://localhost:4566"
-    sts                    = "http://localhost:4566"
+    cloudfront             = "http://localhost:4566"                     # static-site
+    cloudwatchlogs         = "http://localhost:4566"                     # fargate-service（ロググループ）
+    ec2                    = "http://localhost:4566"                     # network（VPC/Subnet/SG/IGW/NAT/EIP）
+    ecs                    = "http://localhost:4566"                     # fargate-service
+    elasticloadbalancing   = "http://localhost:4566"                     # fargate-service（ALB）
+    elasticloadbalancingv2 = "http://localhost:4566"                     # fargate-service（ALB）
+    iam                    = "http://localhost:4566"                     # fargate-service（実行/タスクロール）
+    rds                    = "http://localhost:4566"                     # database
+    s3                     = "http://s3.localhost.localstack.cloud:4566" # static-site
+    secretsmanager         = "http://localhost:4566"                     # secrets
   }
 }
