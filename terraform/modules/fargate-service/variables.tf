@@ -59,6 +59,12 @@ variable "environment" {
   default     = {}
 }
 
+variable "secrets" {
+  description = "Map of container environment variable name to Secrets Manager secret ARN"
+  type        = map(string)
+  default     = {}
+}
+
 variable "health_check_path" {
   type    = string
   default = "/"

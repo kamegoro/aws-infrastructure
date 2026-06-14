@@ -22,6 +22,14 @@ module "database" {
   allowed_security_group_id = module.network.ecs_service_security_group_id
 }
 
+module "secrets" {
+  source = "../../modules/secrets"
+
+  name = var.name
+
+  db_password = module.database.password
+}
+
 module "fargate_service" {
   source = "../../modules/fargate-service"
 
@@ -41,5 +49,10 @@ module "fargate_service" {
     POSTGRES_PORT = tostring(module.database.port)
     POSTGRES_DB   = module.database.db_name
     POSTGRES_USER = module.database.username
+  }
+
+  secrets = {
+    JWT_SECRET        = module.secrets.jwt_secret_arn
+    POSTGRES_PASSWORD = module.secrets.db_password_secret_arn
   }
 }
