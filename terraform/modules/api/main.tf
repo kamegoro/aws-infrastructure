@@ -7,7 +7,7 @@ resource "aws_cloudwatch_log_group" "api" {
   retention_in_days = 14
 }
 
-# --- IAM roles ---
+# --- IAMロール ---
 
 data "aws_iam_policy_document" "ecs_assume_role" {
   statement {
@@ -73,7 +73,7 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-# --- ECS service ---
+# --- ECSサービス ---
 
 resource "aws_ecs_task_definition" "api" {
   family                   = "${var.name}-api"

@@ -11,7 +11,7 @@ variable "frontend_bucket_name" {
 }
 
 variable "container_image" {
-  description = "Container image for the API task. Override with the real task-canvas backend image once it's pushed to LocalStack's ECR."
+  description = "Container image for the API task. Override with the real task-canvas backend image once it's pushed to MiniStack's ECR."
   type        = string
   default     = "public.ecr.aws/docker/library/httpd:2.4"
 }

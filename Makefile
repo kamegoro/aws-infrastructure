@@ -2,45 +2,45 @@ TF_DIR := terraform/envs/local
 
 .PHONY: up down logs tf-init tf-plan tf-apply tf-destroy tf-fmt tf-validate tf-output
 
-## Start MiniStack
+## MiniStackを起動する
 up:
 	docker compose up -d
 	@echo "Waiting for MiniStack to be healthy..."
 	@until [ "$$(docker inspect -f '{{.State.Health.Status}}' aws-infra-ministack 2>/dev/null)" = "healthy" ]; do sleep 2; done
 	@echo "MiniStack is ready."
 
-## Stop MiniStack (keeps state under .localstack/)
+## MiniStackを停止する（.localstack/配下の状態は保持）
 down:
 	docker compose down
 
-## Follow MiniStack logs
+## MiniStackのログを追跡する
 logs:
 	docker compose logs -f ministack
 
-## Initialize the local Terraform environment
+## ローカル環境のTerraformを初期化する
 tf-init:
 	cd $(TF_DIR) && terraform init
 
-## Show the Terraform plan for the local environment
+## ローカル環境のplanを表示する
 tf-plan:
 	cd $(TF_DIR) && terraform plan
 
-## Apply the local environment against MiniStack
+## MiniStackに対してローカル環境をapplyする
 tf-apply:
 	cd $(TF_DIR) && terraform apply
 
-## Destroy the local environment
+## ローカル環境をdestroyする
 tf-destroy:
 	cd $(TF_DIR) && terraform destroy
 
-## Format all Terraform files
+## すべてのTerraformファイルをフォーマットする
 tf-fmt:
 	terraform fmt -recursive
 
-## Validate the local environment configuration
+## ローカル環境の設定をvalidateする
 tf-validate:
 	cd $(TF_DIR) && terraform validate
 
-## Show outputs from the local environment
+## ローカル環境の出力を表示する
 tf-output:
 	cd $(TF_DIR) && terraform output
