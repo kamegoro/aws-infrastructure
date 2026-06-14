@@ -42,16 +42,18 @@ jobs:
           terraform init -backend=false
           terraform validate
 
-  localstack:
-    name: terraform plan/apply (LocalStack)
+  ministack:
+    name: terraform plan/apply (MiniStack)
     runs-on: ubuntu-latest
     services:
-      localstack:
-        image: localstack/localstack:4.14.0
+      ministack:
+        image: ministackorg/ministack:1.3.63
         ports:
           - 4566:4566
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
         options: >-
-          --health-cmd "curl -sf http://localhost:4566/_localstack/health"
+          --health-cmd "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:4566/_ministack/health')\""
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
@@ -67,10 +69,17 @@ jobs:
           terraform init
           terraform plan
 
-      # frontend/api (CloudFront/ECS/ELBv2) are not available on LocalStack
-      # Community edition, so only the network module is applied here.
-      - name: apply/destroy network module against LocalStack
+      - name: apply full environment against MiniStack
+        working-directory: terraform/envs/local
+        run: terraform apply -auto-approve
+
+      # MiniStack 1.3.63 has a bug where DeletePublicAccessBlock succeeds but
+      # GetPublicAccessBlock keeps returning the old config afterwards, which
+      # makes Terraform's destroy-waiter time out. Drop the resource from
+      # state before destroying so terraform doesn't wait on it.
+      # https://github.com/ministackorg/ministack/issues/915
+      - name: destroy full environment against MiniStack
         working-directory: terraform/envs/local
         run: |
-          terraform apply -target=module.network -auto-approve
-          terraform destroy -target=module.network -auto-approve
+          terraform state rm module.frontend.aws_s3_bucket_public_access_block.frontend
+          terraform destroy -auto-approve
