@@ -63,7 +63,7 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-# --- NAT gateway (optional, costs money on real AWS) ---
+# --- NATゲートウェイ（任意。実AWSでは費用が発生する） ---
 
 resource "aws_eip" "nat" {
   count  = var.enable_nat_gateway ? 1 : 0
@@ -110,7 +110,7 @@ resource "aws_route_table_association" "private" {
   route_table_id = aws_route_table.private.id
 }
 
-# --- Security groups ---
+# --- セキュリティグループ ---
 
 resource "aws_security_group" "alb" {
   name        = "${var.name}-alb"

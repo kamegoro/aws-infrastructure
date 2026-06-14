@@ -1,10 +1,6 @@
-# This env is wired up to talk to LocalStack instead of real AWS.
-# It mirrors what the `tflocal` wrapper (https://github.com/localstack/terraform-local)
-# generates at runtime, but is checked in directly so plain `terraform` works
-# without any extra tooling.
-#
-# If you later add an `envs/prod` (or similar) for real AWS, copy the modules
-# wiring from main.tf but use a plain `provider "aws" {}` block there instead.
+# 実AWSではなくMiniStack（LocalStack互換）に接続するための設定。
+# `envs/prod` 等を追加する場合は、main.tfのモジュール呼び出しをコピーし
+# ここを通常の `provider "aws" {}` に置き換える。
 
 provider "aws" {
   region = "us-east-1"

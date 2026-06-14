@@ -3,7 +3,7 @@ services:
     image: ministackorg/ministack:1.3.63
     container_name: aws-infra-ministack
     ports:
-      - "4566:4566" # edge port (all AWS APIs)
+      - "4566:4566" # 全AWS APIのエッジポート
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - PERSIST_STATE=1
