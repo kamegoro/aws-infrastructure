@@ -21,3 +21,15 @@ output "ecs_cluster_name" {
 output "ecs_service_name" {
   value = module.fargate_service.service_name
 }
+
+output "db_endpoint" {
+  value = module.database.endpoint
+}
+
+output "db_port" {
+  value = module.database.port
+}
+
+output "db_name" {
+  value = module.database.db_name
+}
