@@ -3,7 +3,7 @@
 [task-canvas](https://github.com/kamegoro/task-canvas) のインフラ（Terraform）を、
 本番のAWSにお金をかけずにローカルで再現・検証するためのリポジトリです。
 
-[LocalStack](https://www.localstack.cloud/) をDockerで起動し、ローカル環境から
+[MiniStack](https://github.com/ministackorg/ministack) をDockerで起動し、ローカル環境から
 AWS互換APIに対して `terraform apply` できるようにしています。
 
 ## アーキテクチャ
@@ -35,12 +35,13 @@ terraform/
     frontend/  S3 + CloudFront (OAC) でのフロントエンド配信
     api/       ECS Fargate + ALB でのAPI配信
   envs/
-    local/     上記モジュールをまとめてLocalStack向けにワイヤリング
+    local/     上記モジュールをまとめてMiniStack向けにワイヤリング
 ```
 
 `envs/local/providers.tf` には [`tflocal`](https://github.com/localstack/terraform-local)
-が生成するようなLocalStack向けのエンドポイントオーバーライドを直接記述しています。
-そのため `tflocal` コマンドは不要で、通常の `terraform` コマンドのみで動作します。
+が生成するようなLocalStack互換のエンドポイントオーバーライドを直接記述しています。
+MiniStackはLocalStackと同じエンドポイント形式をエミュレートするため、
+`tflocal` コマンドは不要で、通常の `terraform` コマンドのみで動作します。
 
 将来 `envs/prod` のような実AWS向けの環境を追加する場合は、`envs/local/main.tf` の
 モジュール呼び出しをコピーし、`providers.tf` を通常の `provider "aws" {}` に
@@ -57,7 +58,7 @@ mise install
 ## 使い方
 
 ```sh
-# LocalStackを起動（ヘルスチェック待ちまで行う）
+# MiniStackを起動（ヘルスチェック待ちまで行う）
 make up
 
 # terraform/envs/local を初期化してplan/apply
@@ -74,45 +75,47 @@ make down
 
 | ターゲット | 内容 |
 | --- | --- |
-| `make up` / `make down` | LocalStackの起動・停止 |
-| `make logs` | LocalStackのログを追跡 |
+| `make up` / `make down` | MiniStackの起動・停止 |
+| `make logs` | MiniStackのログを追跡 |
 | `make tf-fmt` | `terraform fmt -recursive` |
 | `make tf-validate` | `terraform/envs/local` の `terraform validate` |
 | `make tf-output` | `terraform/envs/local` の出力を表示 |
 
-## LocalStack Community版の制約について
+## MiniStackについて
 
-このリポジトリはLocalStackの**Community版（無料）**を前提としています。
-Community版では、`frontend`/`api` モジュールが利用する以下のサービスは
-エミュレートされません（`LOCALSTACK_AUTH_TOKEN` を設定したPro版が必要）。
+[MiniStack](https://github.com/ministackorg/ministack) はLocalStack互換の
+AWSエミュレータで、MITライセンスでサインアップ不要、`network`/`frontend`/`api`
+すべてのモジュールが利用するサービス（VPC/SG、S3、CloudFront、ECS、ELBv2）を
+無料でエミュレートします。ECSタスクはホストのDocker socketを使って実際の
+コンテナとして起動されます。
 
-- CloudFront
-- ECS
-- ELB / ELBv2 (ALB)
-
-一方、`network` モジュールが利用するVPC/サブネット/ルートテーブル/
-セキュリティグループ（EC2系API）やS3、IAMなどはCommunity版でも利用できます。
-
-このため、ローカルでの動作確認範囲は以下のようになります。
-
-| モジュール | `terraform plan` | `terraform apply`（Community版） |
+| モジュール | `terraform plan` | `terraform apply` |
 | --- | --- | --- |
-| `network` | ✅ | ✅ 実際にVPC等が作成される |
-| `frontend` | ✅ | ❌ CloudFront未対応のため失敗する |
-| `api` | ✅ | ❌ ECS/ALB未対応のため失敗する |
-| `envs/local`（全体） | ✅ | ❌ 上記理由でCloudFront/ECS/ALB部分が失敗する |
-
-`network` モジュールのみを適用したい場合は `-target` を使います。
+| `network` | ✅ | ✅ |
+| `frontend` | ✅ | ✅ |
+| `api` | ✅ | ✅ |
+| `envs/local`（全体） | ✅ | ✅ |
 
 ```sh
 cd terraform/envs/local
-terraform apply -target=module.network
-terraform destroy -target=module.network
+terraform apply
+terraform destroy
 ```
 
-`frontend`/`api` を含む全体を実際に `apply` したい場合は、LocalStackの
-無料アカウントで取得できる `LOCALSTACK_AUTH_TOKEN` を環境変数に設定してから
-`docker compose up` してください（`docker-compose.yml` 参照）。
+### 既知の制約: S3 Public Access Blockのdestroy
+
+MiniStack 1.3.63には、`DeletePublicAccessBlock` が成功を返すものの
+`GetPublicAccessBlock` が以前の設定を返し続けるバグがあり、
+`aws_s3_bucket_public_access_block.frontend` の `terraform destroy` が
+タイムアウトします（[ministackorg/ministack#915](https://github.com/ministackorg/ministack/issues/915)）。
+
+destroyする際は、事前にこのリソースをstateから外してください。
+
+```sh
+cd terraform/envs/local
+terraform state rm module.frontend.aws_s3_bucket_public_access_block.frontend
+terraform destroy
+```
 
 ## CI
 
@@ -121,5 +124,5 @@ push/pull_requestごとに以下を実行しています。
 
 - `terraform fmt -check -recursive`
 - 各モジュール・envに対する `terraform init -backend=false && terraform validate`
-
-LocalStackへの`apply`はCIでは行わず、ローカルでの確認に留めています。
+- MiniStackに対する `envs/local` 全体の `terraform plan` / `apply` / `destroy`
+  （上記のPublic Access Blockの回避を含む）
