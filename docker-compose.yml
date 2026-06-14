@@ -1,0 +1,26 @@
+services:
+  localstack:
+    image: localstack/localstack:4.14.0
+    container_name: aws-infra-localstack
+    ports:
+      - "4566:4566" # edge port (all AWS APIs)
+      - "4510-4559:4510-4559" # external service port range (ECS task containers etc.)
+    environment:
+      # Free LocalStack account token. Without it, ECS/CloudFront emulation is
+      # unavailable and only core services (S3, IAM, EC2/VPC, etc.) work.
+      # See: https://docs.localstack.cloud/getting-started/auth-token/
+      - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN:-}
+      - DEBUG=${DEBUG:-0}
+      - PERSISTENCE=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      # Allow ECS tasks (containers) started by LocalStack to reach the
+      # LocalStack API itself.
+      - LOCALSTACK_HOST=localhost.localstack.cloud
+    volumes:
+      - "./.localstack/volume:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
