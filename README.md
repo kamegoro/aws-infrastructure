@@ -6,6 +6,12 @@
 [MiniStack](https://github.com/ministackorg/ministack) をDockerで起動し、ローカル環境から
 AWS互換APIに対して `terraform apply` できるようにしています。
 
+## このリポジトリの開発の進め方
+
+このリポジトリは[Claude Code](https://claude.com/claude-code)との協働で開発・運用されています。
+開発フローやissue/PRの分割方針、コミット・PRの規約は[CLAUDE.md](CLAUDE.md)に、
+主要な設計上の意思決定は[docs/adr/](docs/adr/)にまとめています。
+
 ## アーキテクチャ
 
 API（ECS Fargate + ALB）とフロントエンド（S3 + CloudFront）を、同一VPC内で
