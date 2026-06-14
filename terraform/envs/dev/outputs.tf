@@ -11,13 +11,13 @@ output "frontend_distribution_domain_name" {
 }
 
 output "alb_dns_name" {
-  value = module.api.alb_dns_name
+  value = module.fargate_service.alb_dns_name
 }
 
 output "ecs_cluster_name" {
-  value = module.api.cluster_name
+  value = module.fargate_service.cluster_name
 }
 
 output "ecs_service_name" {
-  value = module.api.service_name
+  value = module.fargate_service.service_name
 }

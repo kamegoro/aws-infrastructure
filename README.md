@@ -31,9 +31,9 @@ API（ECS Fargate + ALB）とフロントエンド（S3 + CloudFront）を、同
 ```
 terraform/
   modules/
-    network/     VPC, サブネット, ルートテーブル, セキュリティグループ
-    static-site/ S3 + CloudFront (OAC) での静的サイト配信
-    api/         ECS Fargate + ALB でのAPI配信
+    network/         VPC, サブネット, ルートテーブル, セキュリティグループ
+    static-site/     S3 + CloudFront (OAC) での静的サイト配信
+    fargate-service/ ECS Fargate + ALB でのAPI配信
   envs/
     local/     上記モジュールをまとめてMiniStack向けにワイヤリング
     dev/       実AWS向け（開発環境）の骨格
@@ -88,7 +88,7 @@ make down
 ## MiniStackについて
 
 [MiniStack](https://github.com/ministackorg/ministack) はLocalStack互換の
-AWSエミュレータで、MITライセンスでサインアップ不要、`network`/`static-site`/`api`
+AWSエミュレータで、MITライセンスでサインアップ不要、`network`/`static-site`/`fargate-service`
 すべてのモジュールが利用するサービス（VPC/SG、S3、CloudFront、ECS、ELBv2）を
 無料でエミュレートします。ECSタスクはホストのDocker socketを使って実際の
 コンテナとして起動されます。
@@ -97,7 +97,7 @@ AWSエミュレータで、MITライセンスでサインアップ不要、`netw
 | --- | --- | --- |
 | `network` | ✅ | ✅ |
 | `static-site` | ✅ | ✅ |
-| `api` | ✅ | ✅ |
+| `fargate-service` | ✅ | ✅ |
 | `envs/local`（全体） | ✅ | ✅ |
 
 ```sh
