@@ -21,12 +21,12 @@ jobs:
       issues: write
       actions: read
     steps:
-      # ANTHROPIC_API_KEYは#65の手動セットアップが完了するまで未登録のため、
-      # 未登録の間はこのジョブをno-opにしてCIを失敗させない
+      # CLAUDE_CODE_OAUTH_TOKENは`claude setup-token`で発行したトークンを
+      # 登録するまで未登録のため、未登録の間はこのジョブをno-opにしてCIを失敗させない
       - name: 自動化の有効化チェック
         id: check
         run: |
-          if [ "${{ vars.CLAUDE_AUTOMATION_ENABLED }}" = "false" ] || [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+          if [ "${{ vars.CLAUDE_AUTOMATION_ENABLED }}" = "false" ] || [ -z "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
             echo "enabled=false" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=true" >> "$GITHUB_OUTPUT"
@@ -39,7 +39,7 @@ jobs:
         if: steps.check.outputs.enabled == 'true'
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_args: |
             --max-turns 15
