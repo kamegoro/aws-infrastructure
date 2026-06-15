@@ -2,7 +2,7 @@ SHELL := /bin/bash
 
 TF_DIR := terraform/envs/local
 
-.PHONY: up down logs tf-init tf-plan tf-apply tf-destroy tf-fmt tf-validate tf-output sync-frontend e2e
+.PHONY: up down logs tf-init tf-plan tf-apply tf-destroy tf-fmt tf-validate tf-output tflint tfsec sync-frontend e2e
 
 ## MiniStackを起動する
 up:
@@ -32,8 +32,11 @@ tf-apply:
 	cd $(TF_DIR) && terraform apply
 
 ## ローカル環境をdestroyする
+## MiniStackのS3 Public Access Blockのdestroyに関する既知の制約
+## (README参照)の回避策として、destroy前にstateからリソースを除外する
 tf-destroy:
-	cd $(TF_DIR) && terraform destroy
+	cd $(TF_DIR) && terraform state rm module.static_site.aws_s3_bucket_public_access_block.frontend 2>/dev/null; \
+	terraform destroy $(TF_DESTROY_ARGS)
 
 ## すべてのTerraformファイルをフォーマットする
 tf-fmt:
@@ -46,6 +49,15 @@ tf-validate:
 ## ローカル環境の出力を表示する
 tf-output:
 	cd $(TF_DIR) && terraform output
+
+## tflintで静的解析する
+tflint:
+	tflint --init
+	tflint --recursive
+
+## tfsecでセキュリティ面の静的解析をする
+tfsec:
+	tfsec terraform --config-file .tfsec/config.yml
 
 ## 静的アセットをMiniStackのS3バケットにアップロードする (例: make sync-frontend FRONTEND_DIR=../task-canvas/frontend/out)
 sync-frontend:
@@ -64,8 +76,6 @@ e2e: up
 	if [ -n "$(E2E_CMD)" ]; then \
 		( set -a; source <(./scripts/tf-outputs-env.sh); set +a; cd $(E2E_DIR) && $(E2E_CMD) ) || status=$$?; \
 	fi; \
-	( cd $(TF_DIR) \
-	  && terraform state rm module.static_site.aws_s3_bucket_public_access_block.frontend 2>/dev/null; \
-	  terraform destroy -auto-approve ); \
+	$(MAKE) tf-destroy TF_DESTROY_ARGS=-auto-approve; \
 	$(MAKE) down; \
 	exit $$status
