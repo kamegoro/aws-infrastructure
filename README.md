@@ -139,6 +139,28 @@ make down
 | `make tf-validate` | `terraform/envs/local` の `terraform validate` |
 | `make tf-output` | `terraform/envs/local` の出力を表示 |
 | `make sync-frontend FRONTEND_DIR=<dir>` | `<dir>`配下の静的アセットをフロントエンド用S3バケットにアップロード |
+| `make e2e [FRONTEND_DIR=<dir>] [E2E_DIR=<dir> E2E_CMD="<cmd>"]` | MiniStack起動からapply・フロントエンド資産sync・E2Eテスト・destroy・停止までを一括実行 |
+
+### apply・E2Eテスト・destroyを1コマンドで実行する
+
+`make e2e`は、MiniStackの起動からterraformの`apply`、（`FRONTEND_DIR`指定時は）
+フロントエンド資産のsync、（`E2E_DIR`/`E2E_CMD`指定時は）E2Eテストの実行、
+`destroy`、MiniStackの停止までを一括で実行します。E2Eテストの成否に関わらず
+最後にdestroy・停止まで行われます。
+
+```sh
+make e2e \
+  FRONTEND_DIR=path/to/static/assets \
+  E2E_DIR=../task-canvas-e2e \
+  E2E_CMD="mvn test"
+```
+
+`E2E_CMD`は`E2E_DIR`をカレントディレクトリとして実行され、その際に
+`terraform/envs/local`の出力（[outputs.tf](terraform/envs/local/outputs.tf)）が
+`TF_OUT_<出力名をすべて大文字にしたもの>`という環境変数（例:
+`TF_OUT_ALB_DNS_NAME`、`TF_OUT_FRONTEND_BUCKET_NAME`）としてエクスポートされます。
+E2Eテスト側でこれらの環境変数を読み込むことで、MiniStackが生成したエンドポイントに
+接続できます（変換ロジックは[scripts/tf-outputs-env.sh](scripts/tf-outputs-env.sh)）。
 
 ### フロントエンドのビルド資産をS3にアップロードする
 

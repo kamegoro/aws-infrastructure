@@ -8,6 +8,12 @@ variable "bucket_name" {
   type        = string
 }
 
+variable "force_destroy" {
+  description = "If true, allow the bucket to be destroyed even if it contains objects (e.g. uploaded frontend assets)"
+  type        = bool
+  default     = false
+}
+
 variable "default_root_object" {
   description = "Object returned for requests to the distribution root (e.g. index.html)"
   type        = string

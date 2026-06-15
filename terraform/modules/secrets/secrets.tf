@@ -4,7 +4,8 @@ resource "random_password" "jwt_secret" {
 }
 
 resource "aws_secretsmanager_secret" "jwt_secret" {
-  name = "${var.name}-jwt-secret"
+  name                    = "${var.name}-jwt-secret"
+  recovery_window_in_days = var.recovery_window_in_days
 }
 
 resource "aws_secretsmanager_secret_version" "jwt_secret" {
@@ -13,7 +14,8 @@ resource "aws_secretsmanager_secret_version" "jwt_secret" {
 }
 
 resource "aws_secretsmanager_secret" "db_password" {
-  name = "${var.name}-db-password"
+  name                    = "${var.name}-db-password"
+  recovery_window_in_days = var.recovery_window_in_days
 }
 
 resource "aws_secretsmanager_secret_version" "db_password" {
