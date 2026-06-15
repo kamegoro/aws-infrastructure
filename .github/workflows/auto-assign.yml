@@ -15,7 +15,7 @@ jobs:
       pull-requests: write
     steps:
       - name: assigneeが未設定であればkamegoroを設定
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const issue = context.payload.issue ?? context.payload.pull_request;
