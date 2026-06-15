@@ -1,0 +1,67 @@
+name: CI Failure Triage
+
+on:
+  workflow_run:
+    workflows: ["Terraform"]
+    types: [completed]
+
+jobs:
+  triage:
+    # mainブランチでのCI失敗のみを対象とする(PRのWIP中の失敗で
+    # Issueが量産されるのを避けるため)
+    if: |
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ci-failure-triage-${{ github.event.workflow_run.id }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      issues: write
+      actions: read
+    steps:
+      # ANTHROPIC_API_KEYは#65の手動セットアップが完了するまで未登録のため、
+      # 未登録の間はこのジョブをno-opにしてCIを失敗させない
+      - name: 自動化の有効化チェック
+        id: check
+        run: |
+          if [ "${{ vars.CLAUDE_AUTOMATION_ENABLED }}" = "false" ] || [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v6
+        if: steps.check.outputs.enabled == 'true'
+
+      - name: 失敗したCIを調査してIssueを起票
+        if: steps.check.outputs.enabled == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: |
+            --max-turns 15
+            --allowedTools "Bash(gh run view:*),Bash(gh issue list:*),Bash(gh issue create:*)"
+          prompt: |
+            mainブランチで`Terraform`workflow(run ID: ${{ github.event.workflow_run.id }})が失敗しました。
+
+            1. `gh run view ${{ github.event.workflow_run.id }} --log-failed` で
+               失敗したジョブのログを確認し、根本原因を調査してください。
+            2. `gh issue list --search "in:title <run ID>"` 等で、同じ失敗に対する
+               Issueが既に起票されていないか確認してください。既にあれば
+               何もしないでください。
+            3. 調査結果に基づき `gh issue create` でIssueを起票してください。
+               - 自リポジトリのコード/設定の問題と判断できる場合:
+                 原因と修正方針をIssue本文に記載し、`bug`ラベルを付与する
+               - MiniStack等の外部ツールの問題が疑われる場合: その旨と
+                 再現手順をIssue本文に記載し、CLAUDE.mdの
+                 「トラブル発生時の振る舞い」に従って上流
+                 (ministackorg/ministack)への報告が必要であることを
+                 チェックリストとして含める
+               - 原因を特定できない場合: ログの要約のみを記載し、
+                 `needs-human-review`ラベルを付与する
+
+            修正コードの自動コミットや、既存Issueのクローズ・編集は行わないでください。
+            調査結果のIssue起票のみに留めてください。
