@@ -1,0 +1,55 @@
+# 0004. claude-code-actionのガードレール方針
+
+## ステータス
+
+承認
+
+## 背景
+
+#63（自律的な開発サイクルの土台づくり）では、
+[anthropics/claude-code-action](https://github.com/anthropics/claude-code-action)
+を基盤として、Dependabot PRの自動レビュー（#66）、CI失敗時のIssue起票（#67）、
+issue-to-PR（#68）、セカンドレビュー（#70）などのworkflowを段階的に追加していく。
+
+これらのworkflowに何の制約もなく`contents: write`や`gh pr merge`相当の権限を
+与えると、誤った判断によるマージ・push・destroy系操作が連鎖的に発生する
+「暴走」のリスクがある。各workflowを個別に追加する前に、共通の権限方針と
+無効化手段を決めておく必要がある。
+
+## 決定
+
+1. **権限の最小化**: claude-code-actionを使うworkflowには、原則として
+   `contents: write`を付与しない。`contents: read` / `issues: write` /
+   `pull-requests: write`の範囲に留める。
+2. **ラベル方式の間接的な自動化**: マージ・適用などの最終アクションが
+   必要な場合、Claudeは判定結果を`auto-merge-approved`等のラベル付与や
+   コメントに留める。実際のマージ・apply等は、人間が読める権限設定を持つ
+   別workflow（またはユーザー自身）がラベルを見て実行する。
+3. **無効化スイッチ（kill switch）**: claude-code-actionを使う各workflowは、
+   リポジトリ変数`CLAUDE_AUTOMATION_ENABLED`（デフォルト`true`）を先頭で
+   チェックし、`false`の場合は何もせず終了する。暴走時はこの変数を
+   `false`にするだけで全自動化を停止できる。
+4. **同時実行制御**: 各workflowに`concurrency`グループを設定し、
+   同一PR/issueに対する重複実行やAPIレート制限超過を防ぐ
+   （詳細は#92）。
+
+## 理由
+
+- ラベル方式は、Claudeの判断ミスがあっても実際の変更（マージ等）が
+  発生しないため、被害を1段階で止められる
+  ([CyberAgent](https://developers.cyberagent.co.jp/blog/archives/60598/)、
+  [Zenn記事](https://zenn.dev/genda_jp/articles/b3ba6a578714ca))
+- リポジトリ変数1つで全体を止められるkill switchは、実装コストが低く、
+  緊急時に最も早く効く対策である
+- `concurrency`制御は2026年時点のベストプラクティスとしても挙げられており、
+  レート制限・コスト超過の防止に有効
+  ([Claude Code GitHub Actions Docs](https://code.claude.com/docs/en/github-actions))
+
+## 影響
+
+- #65以降、claude-code-actionを使う各workflowの`permissions`は
+  `contents: read`を基本とし、`contents: write`が必要な場合は
+  個別にこのADRを更新して理由を記載する
+- 各workflowの先頭に`CLAUDE_AUTOMATION_ENABLED`のチェック処理を入れる
+- ラベル体系（`.github/labels.yml`）の`auto-merge-approved` /
+  `needs-human-review`等を、この方針に基づいて運用する

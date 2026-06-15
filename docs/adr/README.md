@@ -19,3 +19,4 @@
 | [0001](0001-migrate-from-localstack-to-ministack.md) | LocalStackからMiniStackへの移行 |
 | [0002](0002-inline-security-group-ingress.md) | セキュリティグループのingressをインラインで定義する |
 | [0003](0003-mermaid-for-diagrams.md) | 構成図にはMermaidを使う |
+| [0004](0004-claude-code-action-guardrails.md) | claude-code-actionのガードレール方針 |
