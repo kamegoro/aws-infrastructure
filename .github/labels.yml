@@ -45,7 +45,7 @@
   description: Claudeによるセカンドレビュー済み(#70)
   color: "c5def5"
 - name: claude-ready
-  description: Claudeによる実装(issue-to-PR)対象(#68)
+  description: Claudeによる自動化(@claudeメンション応答・issue-to-PR等)を許可する対象(#68, #126)
   color: "bfd4f2"
 
 # Dependabotが自動付与するラベル（GitHubデフォルト）
