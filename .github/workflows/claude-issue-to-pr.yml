@@ -1,0 +1,88 @@
+name: Issue to PR
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  implement:
+    # claude-readyラベルが付与された時のみ起動する。
+    # ラベル付与にはwrite権限が必要なため、kamegoroが意図したissueのみが対象になる。
+    if: github.event.label.name == 'claude-ready'
+    runs-on: ubuntu-latest
+    # claude.ymlと同じグループ名にすることで、同一issueに対する
+    # @claudeメンション応答とissue-to-PRの実行が同時に走らないようにする
+    concurrency:
+      group: claude-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+    steps:
+      # CLAUDE_CODE_OAUTH_TOKENは`claude setup-token`で発行したトークンを
+      # 登録するまで未登録のため、未登録の間はこのジョブをno-opにしてCIを失敗させない
+      - name: 自動化の有効化チェック
+        id: check
+        run: |
+          if [ "${{ vars.CLAUDE_AUTOMATION_ENABLED }}" = "false" ] || [ -z "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v6
+        if: steps.check.outputs.enabled == 'true'
+
+      - name: Issueを実装してPRを作成
+        if: steps.check.outputs.enabled == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: |
+            --max-turns 50
+            --disallowedTools "Bash(terraform apply:*),Bash(terraform destroy:*),Bash(gh pr merge:*),Bash(gh pr close:*),Bash(gh issue close:*),Bash(gh repo:*),Bash(gh secret:*),Bash(gh label delete:*),Bash(git push:* -f*),Bash(git push:* --force*),Bash(git push origin main*),Bash(git push origin HEAD:main*)"
+          prompt: |
+            issue #${{ github.event.issue.number }} の `claude-ready` ラベルが
+            付与されました。CLAUDE.mdの運用ルールに従って実装し、PRを
+            作成してください。
+
+            ## 手順
+
+            1. CLAUDE.mdを読み、issue #${{ github.event.issue.number }} の
+               本文を確認する
+            2. issueの内容が大きく、CLAUDE.mdの「issue/PRの分割方針」に
+               従って複数のサブissueに分割すべきと判断した場合は、
+               実装には着手せず、元issueを`[umbrella]`化して
+               サブissue（各`Part of #${{ github.event.issue.number }}`を
+               含む）を作成するところまでで終了する
+            3. 実装する場合は、`claude/issue-${{ github.event.issue.number }}-<概要>`
+               という名前で新規ブランチを作成する（**`main`には直接
+               コミット・pushしないこと**）
+            4. CLAUDE.mdの「Terraformの作法」に従って実装し、
+               `terraform fmt -recursive` / `terraform validate` / `tflint`
+               をローカルで実行して問題がないことを確認する
+               - **`terraform apply` / `terraform destroy` /
+                 MiniStackでのE2E確認はこのワークフローでは実行しない**
+                 （PRに対するCI(`terraform.yml`)がMiniStackでの
+                 plan/apply/destroyを実行するため、その結果を
+                 レビュー担当者が確認する）
+            5. コミットメッセージ・PR本文はCLAUDE.mdの
+               「コミット・PRの規約」に従う（`Closes #${{ github.event.issue.number }}`、
+               `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>`を含める）
+            6. `gh pr create`でPRを作成したら、
+               `gh pr edit <PR番号> --add-label needs-human-review`で
+               レビュー待ちであることを明示する
+               （**このPRを自分でマージ・承認しないこと**）
+
+            ## 禁止事項
+
+            - `main`ブランチへの直接コミット・push・force push
+            - `gh pr merge` / `gh pr close` / `gh issue close`等、
+              PR/issueをクローズ・マージする操作
+            - `terraform apply` / `terraform destroy`の実行
+            - リポジトリの設定・Secrets・他のworkflowファイルの変更
+              （issueの内容がそれらの変更を要求している場合は、
+              実装はせず`needs-human-review`を付けたコメントで
+              その旨を報告し、PR作成は行わないこと）
