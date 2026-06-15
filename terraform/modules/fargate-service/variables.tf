@@ -65,6 +65,18 @@ variable "secrets" {
   default     = {}
 }
 
+variable "secrets_as_environment" {
+  description = <<-EOT
+    MiniStackのRunTask実装がECSタスク定義のsecrets(valueFrom)を実コンテナに
+    注入しない制約(ministackorg/ministack#918を参照)の回避策。trueの場合、
+    var.secretsで指定したSecrets Managerの値をTerraformが解決し、
+    secretsではなくenvironmentとしてコンテナに渡す。実AWS(dev/stg/prod)では
+    falseのままにし、通常のsecretsによる注入を使う。
+  EOT
+  type        = bool
+  default     = false
+}
+
 variable "health_check_path" {
   type    = string
   default = "/"

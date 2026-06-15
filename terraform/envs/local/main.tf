@@ -61,4 +61,7 @@ module "fargate_service" {
     JWT_SECRET        = module.secrets.jwt_secret_arn
     POSTGRES_PASSWORD = module.secrets.db_password_secret_arn
   }
+
+  # MiniStackがECSタスク定義のsecretsをコンテナに注入しない制約の回避策(#106)
+  secrets_as_environment = true
 }
