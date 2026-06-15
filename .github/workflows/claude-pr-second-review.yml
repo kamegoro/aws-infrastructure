@@ -1,0 +1,92 @@
+name: Claude PR Second Review
+
+on:
+  pull_request:
+    types: [labeled]
+
+jobs:
+  review:
+    # claude-issue-to-pr.yml(#68)が作成したPR(claude/issue-*ブランチ)に
+    # needs-human-reviewが付与された直後にのみ起動する。
+    # 同一リポジトリ内のブランチのみを対象とし、forkからのPRは対象外。
+    if: |
+      github.event.label.name == 'needs-human-review' &&
+      startsWith(github.event.pull_request.head.ref, 'claude/issue-') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    concurrency:
+      group: claude-pr-review-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      # CLAUDE_CODE_OAUTH_TOKENは`claude setup-token`で発行したトークンを
+      # 登録するまで未登録のため、未登録の間はこのジョブをno-opにしてCIを失敗させない
+      - name: 自動化の有効化チェック
+        id: check
+        run: |
+          if [ "${{ vars.CLAUDE_AUTOMATION_ENABLED }}" = "false" ] || [ -z "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v6
+        if: steps.check.outputs.enabled == 'true'
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: PRをセカンドレビュー
+        if: steps.check.outputs.enabled == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: |
+            --max-turns 20
+            --allowedTools "Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh pr edit:*),Bash(terraform fmt:*),Bash(terraform validate:*),Bash(tflint:*)"
+          prompt: |
+            このPR(#${{ github.event.pull_request.number }})は、issue-to-PR
+            workflow（#68）によってClaude自身が作成したものです。
+            実装したセッションとは独立した立場で、フレッシュな視点から
+            セカンドレビューを行ってください。
+
+            ## レビュー観点
+
+            1. **CLAUDE.mdの規約**
+               - コミットメッセージ・PR本文の形式（`Closes #N`、
+                 `Co-Authored-By`等）
+               - `terraform fmt -recursive` / `terraform validate` /
+                 `tflint`が通ること（`gh pr diff`で変更されたdirに対して
+                 実際に実行して確認する）
+               - Terraformの作法（description記載、必要なモジュールの
+                 endpoints追加、versions.tf等）
+            2. **コードレビュー観点**（正しさ・再利用性・簡潔さ）
+               - 元issueの要件を満たしているか
+               - 既存コードとの一貫性、不要な重複や過度な抽象化が無いか
+               - 明らかなバグやセキュリティ上の懸念が無いか
+
+            ## 実施内容
+
+            1. `gh pr view ${{ github.event.pull_request.number }}` と
+               `gh pr diff ${{ github.event.pull_request.number }}` で
+               変更内容を確認する
+            2. 上記観点でのレビュー結果を、`gh pr comment
+               ${{ github.event.pull_request.number }}`で1件の
+               サマリーコメントとして日本語で投稿する
+               （指摘事項がある場合はファイルパス・行を明記する）
+            3. 重大な問題（CI失敗が見込まれる、要件を満たしていない、
+               明らかなバグ等）が無いと判断した場合のみ、
+               `gh pr edit ${{ github.event.pull_request.number }}
+               --add-label reviewed-by-claude`を実行する
+            4. 重大な問題がある場合は、`reviewed-by-claude`は付与せず、
+               コメントで具体的な指摘を行う（`needs-human-review`は
+               付与済みのため変更不要）
+
+            ## 禁止事項
+
+            - コードの編集・コミット・push（`contents: read`のため
+              実行できません）
+            - `gh pr merge` / `gh pr close` / レビューのapprove/request-changes
+            - `needs-human-review`ラベルの削除
+            - 上記の`allowedTools`以外のコマンドの実行
