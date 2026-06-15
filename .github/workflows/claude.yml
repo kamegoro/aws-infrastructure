@@ -12,11 +12,13 @@ on:
 
 jobs:
   claude:
+    # claude-readyラベルが付与されたissue/PRでのみ@claudeメンションに応答する
+    # (ADR 0004のラベル方式の間接的な自動化方針に合わせ、意図しない発火を防ぐ)
     if: |
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude') && github.event.pull_request.draft == false) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude') && github.event.pull_request.draft == false) ||
-      (github.event_name == 'issues' && contains(github.event.issue.body, '@claude'))
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') && contains(github.event.issue.labels.*.name, 'claude-ready')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude') && github.event.pull_request.draft == false && contains(github.event.pull_request.labels.*.name, 'claude-ready')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude') && github.event.pull_request.draft == false && contains(github.event.pull_request.labels.*.name, 'claude-ready')) ||
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@claude') && contains(github.event.issue.labels.*.name, 'claude-ready'))
     runs-on: ubuntu-latest
     concurrency:
       group: claude-${{ github.event.issue.number || github.event.pull_request.number }}
@@ -46,3 +48,5 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: |
+            --max-turns 30
