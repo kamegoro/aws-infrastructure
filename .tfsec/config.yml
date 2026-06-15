@@ -1,0 +1,30 @@
+# tfsecの除外設定。
+# 除外理由は docs/adr/0005-tfsec-exclusions.md を参照。
+exclude:
+  # アーキテクチャ上、公開エンドポイント・パブリックサブネットが前提のため除外
+  - aws-ec2-no-public-ingress-sgr # AVD-AWS-0107
+  - aws-ec2-no-public-egress-sgr # AVD-AWS-0104
+  - aws-elb-alb-not-public # AVD-AWS-0053
+  - aws-ec2-no-public-ip-subnet # AVD-AWS-0164
+
+  # MiniStackは実ACMのDNS検証ができないため envs/local ではHTTPS必須化を無効化している
+  - aws-elb-http-not-used # AVD-AWS-0054
+  - aws-cloudfront-use-secure-tls-policy # AVD-AWS-0013
+
+  # 追加コスト・MiniStackでの検証価値が低いため対象外
+  - aws-cloudfront-enable-waf # AVD-AWS-0011
+  - aws-ec2-require-vpc-flow-logs-for-all-vpcs # AVD-AWS-0178
+  - aws-s3-enable-bucket-logging # AVD-AWS-0089
+  - aws-cloudfront-enable-logging # AVD-AWS-0010
+  - aws-rds-enable-performance-insights # AVD-AWS-0133
+  - aws-rds-enable-iam-auth # AVD-AWS-0176
+  - aws-ecs-enable-container-insight # AVD-AWS-0034
+
+  # KMS CMKは追加コストがかかり、MiniStackでのKMS機能も限定的なため対象外
+  - aws-cloudwatch-log-group-customer-key # AVD-AWS-0017
+  - aws-ecr-repository-customer-key # AVD-AWS-0033
+  - aws-ssm-secret-use-customer-key # AVD-AWS-0098
+  - aws-s3-encryption-customer-key # AVD-AWS-0132
+
+  # skip_final_snapshot = true でMiniStackのdestroyを妨げないよう意図的に無効化
+  - aws-rds-enable-deletion-protection # AVD-AWS-0177

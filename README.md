@@ -148,6 +148,16 @@ tflint --init
 tflint --recursive
 ```
 
+また、[tfsec](https://github.com/aquasecurity/tfsec)によるセキュリティ面の
+静的解析も実行しています。本番グレードのハードニング項目など、このリポジトリの
+目的に合わない検出項目は[.tfsec/config.yml](.tfsec/config.yml)で除外しており、
+除外理由は[ADR 0005](docs/adr/0005-tfsec-exclusions.md)にまとめています。
+ローカルで実行する場合は以下の通りです。
+
+```sh
+tfsec terraform --config-file .tfsec/config.yml
+```
+
 ## MiniStackについて
 
 [MiniStack](https://github.com/ministackorg/ministack) はLocalStack互換の
