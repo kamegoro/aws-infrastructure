@@ -23,6 +23,19 @@ jobs:
       - name: terraform fmtチェック
         run: terraform fmt -check -recursive terraform
 
+  tflint:
+    name: tflint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: latest
+      - name: tflintを実行
+        run: |
+          tflint --init
+          tflint --recursive --format compact
+
   validate:
     name: terraform validate (${{ matrix.dir }})
     runs-on: ubuntu-latest

@@ -139,6 +139,15 @@ make down
 | `make tf-validate` | `terraform/envs/local` の `terraform validate` |
 | `make tf-output` | `terraform/envs/local` の出力を表示 |
 
+CIでは上記に加えて[tflint](https://github.com/terraform-linters/tflint)
+（[.tflint.hcl](.tflint.hcl)、`terraform`プラグインの`recommended`プリセット）による
+静的解析を実行しています。ローカルで実行する場合は以下の通りです。
+
+```sh
+tflint --init
+tflint --recursive
+```
+
 ## MiniStackについて
 
 [MiniStack](https://github.com/ministackorg/ministack) はLocalStack互換の
