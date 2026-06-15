@@ -1,6 +1,6 @@
 TF_DIR := terraform/envs/local
 
-.PHONY: up down logs tf-init tf-plan tf-apply tf-destroy tf-fmt tf-validate tf-output
+.PHONY: up down logs tf-init tf-plan tf-apply tf-destroy tf-fmt tf-validate tf-output sync-frontend
 
 ## MiniStackを起動する
 up:
@@ -44,3 +44,7 @@ tf-validate:
 ## ローカル環境の出力を表示する
 tf-output:
 	cd $(TF_DIR) && terraform output
+
+## 静的アセットをMiniStackのS3バケットにアップロードする (例: make sync-frontend FRONTEND_DIR=../task-canvas/frontend/out)
+sync-frontend:
+	./scripts/sync-frontend.sh $(FRONTEND_DIR)

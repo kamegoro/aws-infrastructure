@@ -138,6 +138,29 @@ make down
 | `make tf-fmt` | `terraform fmt -recursive` |
 | `make tf-validate` | `terraform/envs/local` の `terraform validate` |
 | `make tf-output` | `terraform/envs/local` の出力を表示 |
+| `make sync-frontend FRONTEND_DIR=<dir>` | `<dir>`配下の静的アセットをフロントエンド用S3バケットにアップロード |
+
+### フロントエンドのビルド資産をS3にアップロードする
+
+`static-site`モジュールはS3バケットとCloudFrontディストリビューションを
+作成するのみで、コンテンツのアップロードは行いません。`terraform apply`後に
+任意の静的アセットディレクトリを[scripts/sync-frontend.sh](scripts/sync-frontend.sh)で
+アップロードできます（バケット名は`terraform output`から取得します）。
+
+```sh
+make sync-frontend FRONTEND_DIR=path/to/static/assets
+```
+
+> [!NOTE]
+> MiniStackのCloudFrontはコントロールプレーン（ディストリビューションの
+> 作成・管理API）のみをエミュレートし、ディストリビューションドメイン
+> （`*.cloudfront.net`）経由での実際のコンテンツ配信は行いません。
+> アップロード結果の確認はS3バケットへの直接アクセスで行ってください。
+>
+> ```sh
+> aws --endpoint-url=http://s3.localhost.localstack.cloud:4566 \
+>   s3 ls s3://$(terraform -chdir=terraform/envs/local output -raw frontend_bucket_name)/
+> ```
 
 CIでは上記に加えて[tflint](https://github.com/terraform-linters/tflint)
 （[.tflint.hcl](.tflint.hcl)、`terraform`プラグインの`recommended`プリセット）による
