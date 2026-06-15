@@ -20,3 +20,4 @@
 | [0002](0002-inline-security-group-ingress.md) | セキュリティグループのingressをインラインで定義する |
 | [0003](0003-mermaid-for-diagrams.md) | 構成図にはMermaidを使う |
 | [0004](0004-claude-code-action-guardrails.md) | claude-code-actionのガードレール方針 |
+| [0005](0005-tfsec-exclusions.md) | tfsecの導入と検出項目の除外方針 |

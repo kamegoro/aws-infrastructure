@@ -36,6 +36,18 @@ jobs:
           tflint --init
           tflint --recursive --format compact
 
+  tfsec:
+    name: tfsec
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: tfsecをインストール
+        run: |
+          curl -sSL "https://github.com/aquasecurity/tfsec/releases/download/v1.28.14/tfsec-linux-amd64" -o /usr/local/bin/tfsec
+          chmod +x /usr/local/bin/tfsec
+      - name: tfsecを実行
+        run: tfsec terraform --config-file .tfsec/config.yml
+
   validate:
     name: terraform validate (${{ matrix.dir }})
     runs-on: ubuntu-latest
