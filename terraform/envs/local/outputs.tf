@@ -33,3 +33,7 @@ output "db_port" {
 output "db_name" {
   value = module.database.db_name
 }
+
+output "ecr_repository_url" {
+  value = module.ecr.repository_url
+}
