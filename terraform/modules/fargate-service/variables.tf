@@ -69,3 +69,15 @@ variable "health_check_path" {
   type    = string
   default = "/"
 }
+
+variable "enable_https" {
+  description = "Whether to add an HTTPS listener (port 443) on the ALB"
+  type        = bool
+  default     = false
+}
+
+variable "acm_certificate_arn" {
+  description = "ARN of an ACM certificate for the ALB HTTPS listener. Required when enable_https = true."
+  type        = string
+  default     = ""
+}
