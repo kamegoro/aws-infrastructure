@@ -1,0 +1,42 @@
+name: Security Review
+
+on:
+  pull_request:
+    paths:
+      - "terraform/**"
+      - ".github/workflows/security-review.yml"
+
+jobs:
+  security-review:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    concurrency:
+      group: security-review-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      # ANTHROPIC_API_KEYは#65の手動セットアップが完了するまで未登録のため、
+      # 未登録の間はこのジョブをno-opにしてCIを失敗させない
+      - name: 自動化の有効化チェック
+        id: check
+        run: |
+          if [ "${{ vars.CLAUDE_AUTOMATION_ENABLED }}" = "false" ] || [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v6
+        if: steps.check.outputs.enabled == 'true'
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 2
+
+      - name: Claude Code Security Reviewを実行
+        if: steps.check.outputs.enabled == 'true'
+        uses: anthropics/claude-code-security-review@main
+        with:
+          comment-pr: true
+          claude-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
