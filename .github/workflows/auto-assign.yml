@@ -1,0 +1,30 @@
+name: 自動アサイン
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+jobs:
+  assign:
+    name: assigneeを自動設定
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: assigneeが未設定であればkamegoroを設定
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const issue = context.payload.issue ?? context.payload.pull_request;
+            if (issue.assignees.length > 0) {
+              return;
+            }
+            await github.rest.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              assignees: ["kamegoro"],
+            });
