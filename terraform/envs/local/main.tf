@@ -10,6 +10,10 @@ module "static_site" {
 
   name        = var.name
   bucket_name = var.frontend_bucket_name
+
+  # make e2eではsync-frontendでアップロードしたオブジェクトが残ったまま
+  # destroyするため、バケットを強制的に削除できるようにする
+  force_destroy = true
 }
 
 module "ecr" {
@@ -34,6 +38,10 @@ module "secrets" {
   name = var.name
 
   db_password = module.database.password
+
+  # MiniStackではapply/destroyを繰り返すため、デフォルトのリカバリー期間(30日)では
+  # 再applyのSecretsManager.CreateSecretがResourceExistsExceptionで失敗する
+  recovery_window_in_days = 0
 }
 
 module "fargate_service" {
