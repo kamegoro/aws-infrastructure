@@ -7,6 +7,14 @@ resource "aws_cloudwatch_log_group" "api" {
   retention_in_days = 14
 }
 
+# MiniStackのRunTask実装がsecrets(valueFrom)をコンテナに注入しない制約の
+# 回避策(var.secrets_as_environment)。secrets_as_environment=trueの場合のみ、
+# var.secretsで指定されたARNの値をTerraformが解決する。
+data "aws_secretsmanager_secret_version" "for_environment" {
+  for_each  = var.secrets_as_environment ? var.secrets : {}
+  secret_id = each.value
+}
+
 resource "aws_ecs_task_definition" "api" {
   family                   = "${var.name}-api"
   requires_compatibilities = ["FARGATE"]
@@ -29,11 +37,17 @@ resource "aws_ecs_task_definition" "api" {
         }
       ]
 
-      environment = [
-        for key, value in var.environment : { name = key, value = value }
-      ]
+      environment = concat(
+        [for key, value in var.environment : { name = key, value = value }],
+        var.secrets_as_environment ? [
+          for key, arn in var.secrets : {
+            name  = key
+            value = data.aws_secretsmanager_secret_version.for_environment[key].secret_string
+          }
+        ] : []
+      )
 
-      secrets = [
+      secrets = var.secrets_as_environment ? [] : [
         for key, arn in var.secrets : { name = key, valueFrom = arn }
       ]
 
