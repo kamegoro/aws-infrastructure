@@ -47,7 +47,7 @@ flowchart TB
 | コンポーネント | モジュール | 役割 |
 | --- | --- | --- |
 | CloudFront + S3 | `static-site` | フロントエンド（task-canvasのビルド資産）の配信 |
-| ALB + ECS Fargate | `fargate-service` | task-canvasのbackend APIの実行 |
+| ALB + ECS Fargate | `fargate-service` | task-canvasのbackend APIの実行（`enable_https`/`acm_certificate_arn`変数でALBのHTTPS(443)リスナーを有効化可能。dev/stg/prod（実AWS）向けで、MiniStackでは未使用） |
 | RDS (PostgreSQL) | `database` | task-canvasが利用するデータベース |
 | Secrets Manager | `secrets` | `JWT_SECRET`・DBパスワードをECSタスクに注入 |
 | VPC / サブネット / SG | `network` | 上記すべてのネットワーク基盤 |

@@ -11,6 +11,16 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # HTTPSは常に許可しておく（リスナーの有効/無効はfargate-serviceモジュールの
+  # enable_https変数側で制御するため、SG側に条件分岐を持たせない）
+  ingress {
+    description = "HTTPS from anywhere"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
