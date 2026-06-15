@@ -31,6 +31,13 @@ jobs:
       - uses: terraform-linters/setup-tflint@v4
         with:
           tflint_version: latest
+      - name: tflintプラグインキャッシュ
+        uses: actions/cache@v4
+        with:
+          path: ~/.tflint.d
+          key: tflint-${{ runner.os }}-${{ hashFiles('.tflint.hcl') }}
+          restore-keys: |
+            tflint-${{ runner.os }}-
       - name: tflintを実行
         run: |
           tflint --init
@@ -52,11 +59,22 @@ jobs:
           - terraform/envs/dev
           - terraform/envs/stg
           - terraform/envs/prod
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
     steps:
       - uses: actions/checkout@v6
       - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "1.15.6"
+      - name: Terraformプロバイダキャッシュ
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: terraform-providers-1.15.6-${{ runner.os }}-${{ hashFiles('terraform/**/.terraform.lock.hcl', 'terraform/**/versions.tf') }}
+          restore-keys: |
+            terraform-providers-1.15.6-${{ runner.os }}-
+      - name: プラグインキャッシュディレクトリを作成
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
       - name: terraform init
         working-directory: ${{ matrix.dir }}
         run: terraform init -backend=false
@@ -79,11 +97,24 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
     steps:
       - uses: actions/checkout@v6
       - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "1.15.6"
+
+      - name: Terraformプロバイダキャッシュ
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: terraform-providers-1.15.6-${{ runner.os }}-${{ hashFiles('terraform/**/.terraform.lock.hcl', 'terraform/**/versions.tf') }}
+          restore-keys: |
+            terraform-providers-1.15.6-${{ runner.os }}-
+
+      - name: プラグインキャッシュディレクトリを作成
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
 
       - name: MiniStackに対してplan
         working-directory: terraform/envs/local
