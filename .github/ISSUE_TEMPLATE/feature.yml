@@ -19,6 +19,33 @@ body:
     validations:
       required: true
   - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: 受け入れ条件
+      description: |
+        何をもって完了とするか（箇条書き）。
+        `claude-ready` ラベルでissue-to-PR workflowを起動する場合、
+        Claudeはこの条件を実装の完了判定として使用します。
+      placeholder: |
+        - terraform fmt / validate / tflint がpassすること
+        - CIのplan/apply/destroyがpassすること
+        - （モジュール固有の確認項目）
+    validations:
+      required: true
+  - type: textarea
+    id: technical-notes
+    attributes:
+      label: 技術ノート（任意）
+      description: |
+        変更対象のファイル・モジュール、使うべきパターン・禁止パターンなど。
+        具体的なヒントがあるほどissue-to-PRの実装精度が上がります。
+      placeholder: |
+        - 変更対象: terraform/modules/xxx/
+        - 参考にする既存モジュール: terraform/modules/yyy/
+        - （注意点・制約など）
+    validations:
+      required: false
+  - type: textarea
     id: related
     attributes:
       label: 関連
