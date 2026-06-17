@@ -16,7 +16,14 @@ description: CLAUDE.mdの規約に沿ったGitHub Issueを作成する（種類/
    - umbrella issue（複数のサブissueに分割される大きな変更、`umbrella`）
 
    既存のIssue Forms（`.github/ISSUE_TEMPLATE/`）の項目を参考に、
-   背景・やること（または全体像・サブissue）・関連issueを本文に含める。
+   以下を本文に含める。
+
+   - **通常issue**: 背景・やること・**受け入れ条件**・技術ノート（任意）・関連
+   - **umbrella issue**: 背景・全体像・サブissue一覧・関連
+
+   `claude-ready` ラベルでissue-to-PR workflowを起動する予定のissueは、
+   **受け入れ条件**（何をもって完了か）と**技術ノート**（変更対象ファイル・
+   参考にすべき既存モジュール等）を具体的に書くほどAIの実装精度が上がる。
 
 2. **ラベルを付与する**
 
