@@ -45,7 +45,7 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: |
             --max-turns 30
-            --allowedTools "Read,Glob,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh pr edit:*),Bash(terraform fmt:*),Bash(terraform validate:*),Bash(tflint:*)"
+            --allowedTools "Read,Glob,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr edit:*),Bash(gh api repos/*/pulls/*/reviews:*),Bash(terraform fmt:*),Bash(terraform validate:*),Bash(tflint:*)"
           prompt: |
             このPR(#${{ github.event.pull_request.number }})は、issue-to-PR
             workflow（#68）によってClaude自身が作成したものです。
@@ -73,16 +73,32 @@ jobs:
                `gh pr diff ${{ github.event.pull_request.number }}` で
                変更内容を確認する
             2. `Read` で `CLAUDE.md` を読み、規約を把握する
-            3. 上記観点でのレビュー結果を、`gh pr comment
-               ${{ github.event.pull_request.number }}`で1件の
-               サマリーコメントとして日本語で投稿する
-               （指摘事項がある場合はファイルパス・行を明記する）
+            3. 以下の GitHub API でレビューを投稿する（**指摘をdiffの該当行に
+               インラインコメントとして紐付けること**）
+
+               ```bash
+               gh api repos/kamegoro/aws-infrastructure/pulls/${{ github.event.pull_request.number }}/reviews \
+                 --method POST \
+                 -f body="## セカンドレビュー結果\n{全体サマリー}" \
+                 -f event="COMMENT" \
+                 -f "comments[][path]={ファイルパス}" \
+                 -F "comments[][line]={行番号（ファイル内の実際の行番号）}" \
+                 -f "comments[][side]=RIGHT" \
+                 -f "comments[][body]={指摘内容}"
+               ```
+
+               - `body`: レビュー全体のサマリー（問題なし/要対応の総括）
+               - `comments`: 指摘がある行ごとに1エントリ追加する
+               - 指摘がない場合は `comments` を省略してサマリーのみ投稿する
+               - `line` には diff ではなくファイル内の**実際の行番号**を指定する
+               - `side` は変更後（RIGHT）を基本とする
+
             4. 重大な問題（CI失敗が見込まれる、要件を満たしていない、
                明らかなバグ等）が無いと判断した場合のみ、
                `gh pr edit ${{ github.event.pull_request.number }}
                --add-label reviewed-by-claude`を実行する
             5. 重大な問題がある場合は、`reviewed-by-claude`は付与せず、
-               コメントで具体的な指摘を行う（`needs-human-review`は
+               インラインコメントで具体的な指摘を行う（`needs-human-review`は
                付与済みのため変更不要）
 
             ## 禁止事項
@@ -90,5 +106,6 @@ jobs:
             - コードの編集・コミット・push（`contents: read`のため
               実行できません）
             - `gh pr merge` / `gh pr close` / レビューのapprove/request-changes
+              （`event` には `"COMMENT"` のみ使用し `"APPROVE"` / `"REQUEST_CHANGES"` は使わない）
             - `needs-human-review`ラベルの削除
             - 上記の`allowedTools`以外のコマンドの実行
