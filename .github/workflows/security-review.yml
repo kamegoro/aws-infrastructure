@@ -8,6 +8,7 @@ on:
 
 jobs:
   security-review:
+    # draft PRと、fork PRのsecrets無しケースは対象外
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     concurrency:
@@ -17,12 +18,10 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      # ANTHROPIC_API_KEYは#65の手動セットアップが完了するまで未登録のため、
-      # 未登録の間はこのジョブをno-opにしてCIを失敗させない
       - name: 自動化の有効化チェック
         id: check
         run: |
-          if [ "${{ vars.CLAUDE_AUTOMATION_ENABLED }}" = "false" ] || [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+          if [ "${{ vars.CLAUDE_AUTOMATION_ENABLED }}" = "false" ] || [ -z "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
             echo "enabled=false" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=true" >> "$GITHUB_OUTPUT"
@@ -34,9 +33,67 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 2
 
-      - name: Claude Code Security Reviewを実行
+      - name: TerraformのセキュリティレビューをClaudeで実行
         if: steps.check.outputs.enabled == 'true'
-        uses: anthropics/claude-code-security-review@main
+        uses: anthropics/claude-code-action@v1
         with:
-          comment-pr: true
-          claude-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: |
+            --max-turns 15
+            --allowedTools "Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Read,Glob"
+          prompt: |
+            このPR(#${{ github.event.pull_request.number }})のTerraformの変更を
+            セキュリティ観点でレビューしてください。
+
+            ## 手順
+
+            1. `gh pr diff ${{ github.event.pull_request.number }}` で変更内容を確認する
+            2. 変更されたTerraformファイルを `Read` / `Glob` で読み込み、
+               コンテキストを把握する
+            3. 以下の観点でセキュリティリスクを評価する
+            4. `gh pr comment ${{ github.event.pull_request.number }}` で
+               レビュー結果を日本語で1件コメントする
+
+            ## レビュー観点
+
+            静的解析（tfsec）では捉えにくい、コンテキスト依存のリスクに
+            フォーカスする（tfsecの検出項目との重複は最小限にする）。
+
+            - **IAM**: ワイルドカード権限（`*`）の妥当性、最小権限の原則に
+              反していないか、信頼ポリシーが過度に広くないか
+            - **ネットワーク**: セキュリティグループの0.0.0.0/0許可の意図が
+              明確か、不要なポートが開放されていないか
+            - **データ保護**: S3/RDS/SecretsManagerの暗号化設定、
+              削除保護・バックアップ保持期間が適切か
+            - **シークレット**: ハードコードされた認証情報・トークン・
+              パスワードが含まれていないか
+            - **ロギング**: 重要リソースのCloudTrail/アクセスログが
+              有効化されているか
+            - **MiniStack固有の設定**: 本番環境では不適切だが
+              MiniStack用に意図的に緩和されている設定（ADR参照）を
+              区別して評価する
+
+            ## コメントの形式
+
+            ```
+            ## セキュリティレビュー結果
+
+            ### 🔴 要対応（マージ前に修正推奨）
+            （問題がある場合のみ、ファイルパス・行番号を明記）
+
+            ### 🟡 確認推奨
+            （注意点・改善余地があるが必須ではないもの）
+
+            ### ✅ 問題なし
+            （特に懸念点がない場合）
+
+            ---
+            *このコメントはClaude（`claude-code-action@v1`）によって自動生成されました。*
+            *静的解析（tfsec）との重複指摘は意図的に省略しています。*
+            ```
+
+            ## 禁止事項
+
+            - コードの編集・コミット・push
+            - `gh pr merge` / `gh pr close` / `gh pr review`（approve/request-changes）
+            - 上記の `allowedTools` 以外のコマンドの実行
