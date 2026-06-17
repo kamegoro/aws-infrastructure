@@ -44,8 +44,8 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: |
-            --max-turns 20
-            --allowedTools "Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh pr edit:*),Bash(terraform fmt:*),Bash(terraform validate:*),Bash(tflint:*)"
+            --max-turns 30
+            --allowedTools "Read,Glob,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh pr edit:*),Bash(terraform fmt:*),Bash(terraform validate:*),Bash(tflint:*)"
           prompt: |
             このPR(#${{ github.event.pull_request.number }})は、issue-to-PR
             workflow（#68）によってClaude自身が作成したものです。
@@ -57,11 +57,11 @@ jobs:
             1. **CLAUDE.mdの規約**
                - コミットメッセージ・PR本文の形式（`Closes #N`、
                  `Co-Authored-By`等）
-               - `terraform fmt -recursive` / `terraform validate` /
-                 `tflint`が通ること（`gh pr diff`で変更されたdirに対して
-                 実際に実行して確認する）
                - Terraformの作法（description記載、必要なモジュールの
                  endpoints追加、versions.tf等）
+               - `.tf` ファイルが差分に含まれる場合のみ `terraform fmt` /
+                 `terraform validate` / `tflint` を実行して確認する
+                 （含まれない場合はスキップする）
             2. **コードレビュー観点**（正しさ・再利用性・簡潔さ）
                - 元issueの要件を満たしているか
                - 既存コードとの一貫性、不要な重複や過度な抽象化が無いか
@@ -72,15 +72,16 @@ jobs:
             1. `gh pr view ${{ github.event.pull_request.number }}` と
                `gh pr diff ${{ github.event.pull_request.number }}` で
                変更内容を確認する
-            2. 上記観点でのレビュー結果を、`gh pr comment
+            2. `Read` で `CLAUDE.md` を読み、規約を把握する
+            3. 上記観点でのレビュー結果を、`gh pr comment
                ${{ github.event.pull_request.number }}`で1件の
                サマリーコメントとして日本語で投稿する
                （指摘事項がある場合はファイルパス・行を明記する）
-            3. 重大な問題（CI失敗が見込まれる、要件を満たしていない、
+            4. 重大な問題（CI失敗が見込まれる、要件を満たしていない、
                明らかなバグ等）が無いと判断した場合のみ、
                `gh pr edit ${{ github.event.pull_request.number }}
                --add-label reviewed-by-claude`を実行する
-            4. 重大な問題がある場合は、`reviewed-by-claude`は付与せず、
+            5. 重大な問題がある場合は、`reviewed-by-claude`は付与せず、
                コメントで具体的な指摘を行う（`needs-human-review`は
                付与済みのため変更不要）
 
