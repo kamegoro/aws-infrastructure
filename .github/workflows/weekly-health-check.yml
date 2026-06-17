@@ -14,98 +14,90 @@ jobs:
     permissions:
       contents: read
       issues: write
-      pull-requests: read
-      id-token: write
     steps:
-      # CLAUDE_CODE_OAUTH_TOKENが未登録の間はno-opにしてCIを失敗させない
-      - name: 自動化の有効化チェック
-        id: check
+      - name: ヘルスチェックを実行してレポートをissue #63 にコメントする
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: kamegoro/aws-infrastructure
         run: |
-          if [ "${{ vars.CLAUDE_AUTOMATION_ENABLED }}" = "false" ] || [ -z "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          TODAY=$(date -u +%Y-%m-%d)
+          THRESHOLD_14=$(date -u -d '14 days ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-14d +%Y-%m-%dT%H:%M:%SZ)
+          THRESHOLD_7=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-7d +%Y-%m-%dT%H:%M:%SZ)
+
+          # --- 1. 滞留issue（14日以上更新なし、自動化ラベルを除外）---
+          SKIP_LABELS="claude-ready|auto-merge-approved|needs-human-review|reviewed-by-claude"
+          STALE_ISSUES=$(gh issue list \
+            --repo "$REPO" \
+            --state open \
+            --json number,title,updatedAt,labels \
+            --limit 200 \
+            --jq --arg threshold "$THRESHOLD_14" --arg skip "$SKIP_LABELS" '
+              [ .[]
+                | select(.updatedAt < $threshold)
+                | select(.labels | map(.name) | join(",") | test($skip) | not)
+              ]
+              | sort_by(.updatedAt)
+              | .[]
+              | "- #\(.number) \(.title)（\(.updatedAt | split("T")[0])）"
+            ')
+
+          if [ -z "$STALE_ISSUES" ]; then
+            STALE_SECTION="なし"
           else
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            STALE_SECTION="$STALE_ISSUES"
           fi
 
-      - uses: actions/checkout@v6
-        if: steps.check.outputs.enabled == 'true'
+          # --- 2. Dependabot PR 滞留（7日以上）---
+          STALE_DEPS=$(gh pr list \
+            --repo "$REPO" \
+            --author app/dependabot \
+            --state open \
+            --json number,title,createdAt \
+            --limit 50 \
+            --jq --arg threshold "$THRESHOLD_7" '
+              [ .[]
+                | select(.createdAt < $threshold)
+              ]
+              | sort_by(.createdAt)
+              | .[]
+              | "- #\(.number) \(.title)（\(.createdAt | split("T")[0])）"
+            ')
 
-      - name: 週次ヘルスチェックを実行
-        if: steps.check.outputs.enabled == 'true'
-        uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          claude_args: |
-            --max-turns 20
-            --allowedTools "Read,Glob,Bash(gh issue list:*),Bash(gh issue comment:*),Bash(gh pr list:*),Bash(gh api:*)"
-          prompt: |
-            リポジトリ（kamegoro/aws-infrastructure）の週次ヘルスチェックを実施し、
-            結果を umbrella issue #63 にコメントしてください。
+          if [ -z "$STALE_DEPS" ]; then
+            DEPS_SECTION="なし"
+          else
+            DEPS_SECTION="$STALE_DEPS"
+          fi
 
-            ## チェック項目
+          # --- 3. Terraform provider バージョン確認 ---
+          # versions.tf から現在のバージョン制約を取得
+          VERSIONS_TF=$(gh api \
+            "repos/$REPO/contents/terraform/envs/local/versions.tf" \
+            --jq '.content | @base64d')
 
-            ### 1. 滞留issueの確認
+          CURRENT_AWS=$(echo "$VERSIONS_TF" | grep -A2 '"aws"' | grep 'version' | grep -oP '[\d.]+' | head -1 || echo "不明")
+          CURRENT_TF=$(echo "$VERSIONS_TF" | grep 'required_version' | grep -oP '[\d.]+' | head -1 || echo "不明")
 
-            ```bash
-            gh issue list --repo kamegoro/aws-infrastructure \
-              --state open --json number,title,updatedAt,labels \
-              --limit 100
-            ```
+          # GitHub Releases から最新バージョンを取得
+          LATEST_AWS=$(gh api repos/hashicorp/terraform-provider-aws/releases/latest --jq '.tag_name' | sed 's/^v//')
+          LATEST_TF=$(gh api repos/hashicorp/terraform/releases/latest --jq '.tag_name' | sed 's/^v//')
 
-            を実行し、最終更新が14日以上前のopenなissueを一覧にする。
-            `claude-ready` / `auto-merge-approved` / `needs-human-review` ラベルが
-            付いているものは自動化フロー中のため対象外。
+          VERSION_SECTION="- hashicorp/aws provider: 現在 \`${CURRENT_AWS}\` → 最新 \`${LATEST_AWS}\`
+          - Terraform: 現在 \`${CURRENT_TF}\` → 最新 \`${LATEST_TF}\`"
 
-            ### 2. Dependabot PRの滞留確認
+          # --- レポートを issue #63 にコメント ---
+          gh issue comment 63 \
+            --repo "$REPO" \
+            --body "## 週次ヘルスチェック（${TODAY}）
 
-            ```bash
-            gh pr list --repo kamegoro/aws-infrastructure \
-              --author app/dependabot --state open \
-              --json number,title,createdAt,labels \
-              --limit 50
-            ```
+          ### 滞留 issue（14日以上更新なし）
 
-            を実行し、作成から7日以上経過しているDependabot PRを一覧にする。
+          ${STALE_SECTION}
 
-            ### 3. Terraform providerバージョン確認
+          ### Dependabot PR 滞留（7日以上）
 
-            `Read` で `terraform/envs/local/versions.tf` を読み、
-            `required_providers` のバージョン制約を確認する。
-            次にGitHub APIで最新リリースを確認する：
+          ${DEPS_SECTION}
 
-            ```bash
-            # hashicorp/terraform-provider-aws の最新リリース
-            gh api repos/hashicorp/terraform-provider-aws/releases/latest \
-              --jq '.tag_name'
+          ### Terraform バージョン
 
-            # hashicorp/terraform の最新リリース
-            gh api repos/hashicorp/terraform/releases/latest \
-              --jq '.tag_name'
-            ```
-
-            ## レポート投稿
-
-            チェック結果を以下のフォーマットで1件のコメントとして投稿する：
-
-            ```bash
-            gh issue comment 63 --repo kamegoro/aws-infrastructure --body "$(cat <<'REPORT'
-            ## 週次ヘルスチェック（YYYY-MM-DD）
-
-            ### 滞留issue（14日以上更新なし）
-            <!-- 対象があれば列挙、なければ「なし」 -->
-
-            ### Dependabot PR滞留（7日以上）
-            <!-- 対象があれば列挙、なければ「なし」 -->
-
-            ### Terraformバージョン
-            <!-- 現在のバージョン制約と最新リリースを記載 -->
-            REPORT
-            )"
-            ```
-
-            ## 禁止事項
-
-            - issueのクローズ・ラベル変更
-            - PR の承認・マージ・クローズ
-            - コードの編集・コミット
-            - 上記の `allowedTools` 以外のコマンドの実行
+          ${VERSION_SECTION}"
