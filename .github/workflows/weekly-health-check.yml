@@ -1,0 +1,111 @@
+name: Weekly Health Check
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'  # 毎週月曜 09:00 JST (UTC 00:00)
+  workflow_dispatch:  # 手動実行（テスト用）
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: weekly-health-check
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      id-token: write
+    steps:
+      # CLAUDE_CODE_OAUTH_TOKENが未登録の間はno-opにしてCIを失敗させない
+      - name: 自動化の有効化チェック
+        id: check
+        run: |
+          if [ "${{ vars.CLAUDE_AUTOMATION_ENABLED }}" = "false" ] || [ -z "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v6
+        if: steps.check.outputs.enabled == 'true'
+
+      - name: 週次ヘルスチェックを実行
+        if: steps.check.outputs.enabled == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: |
+            --max-turns 20
+            --allowedTools "Read,Glob,Bash(gh issue list:*),Bash(gh issue comment:*),Bash(gh pr list:*),Bash(gh api:*)"
+          prompt: |
+            リポジトリ（kamegoro/aws-infrastructure）の週次ヘルスチェックを実施し、
+            結果を umbrella issue #63 にコメントしてください。
+
+            ## チェック項目
+
+            ### 1. 滞留issueの確認
+
+            ```bash
+            gh issue list --repo kamegoro/aws-infrastructure \
+              --state open --json number,title,updatedAt,labels \
+              --limit 100
+            ```
+
+            を実行し、最終更新が14日以上前のopenなissueを一覧にする。
+            `claude-ready` / `auto-merge-approved` / `needs-human-review` ラベルが
+            付いているものは自動化フロー中のため対象外。
+
+            ### 2. Dependabot PRの滞留確認
+
+            ```bash
+            gh pr list --repo kamegoro/aws-infrastructure \
+              --author app/dependabot --state open \
+              --json number,title,createdAt,labels \
+              --limit 50
+            ```
+
+            を実行し、作成から7日以上経過しているDependabot PRを一覧にする。
+
+            ### 3. Terraform providerバージョン確認
+
+            `Read` で `terraform/envs/local/versions.tf` を読み、
+            `required_providers` のバージョン制約を確認する。
+            次にGitHub APIで最新リリースを確認する：
+
+            ```bash
+            # hashicorp/terraform-provider-aws の最新リリース
+            gh api repos/hashicorp/terraform-provider-aws/releases/latest \
+              --jq '.tag_name'
+
+            # hashicorp/terraform の最新リリース
+            gh api repos/hashicorp/terraform/releases/latest \
+              --jq '.tag_name'
+            ```
+
+            ## レポート投稿
+
+            チェック結果を以下のフォーマットで1件のコメントとして投稿する：
+
+            ```bash
+            gh issue comment 63 --repo kamegoro/aws-infrastructure --body "$(cat <<'REPORT'
+            ## 週次ヘルスチェック（YYYY-MM-DD）
+
+            ### 滞留issue（14日以上更新なし）
+            <!-- 対象があれば列挙、なければ「なし」 -->
+
+            ### Dependabot PR滞留（7日以上）
+            <!-- 対象があれば列挙、なければ「なし」 -->
+
+            ### Terraformバージョン
+            <!-- 現在のバージョン制約と最新リリースを記載 -->
+            REPORT
+            )"
+            ```
+
+            ## 禁止事項
+
+            - issueのクローズ・ラベル変更
+            - PR の承認・マージ・クローズ
+            - コードの編集・コミット
+            - 上記の `allowedTools` 以外のコマンドの実行
