@@ -1,0 +1,103 @@
+name: Weekly Health Check
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'  # 毎週月曜 09:00 JST (UTC 00:00)
+  workflow_dispatch:  # 手動実行（テスト用）
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: weekly-health-check
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: ヘルスチェックを実行してレポートをissue #63 にコメントする
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: kamegoro/aws-infrastructure
+        run: |
+          TODAY=$(date -u +%Y-%m-%d)
+          THRESHOLD_14=$(date -u -d '14 days ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-14d +%Y-%m-%dT%H:%M:%SZ)
+          THRESHOLD_7=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-7d +%Y-%m-%dT%H:%M:%SZ)
+
+          # --- 1. 滞留issue（14日以上更新なし、自動化ラベルを除外）---
+          SKIP_LABELS="claude-ready|auto-merge-approved|needs-human-review|reviewed-by-claude"
+          STALE_ISSUES=$(gh issue list \
+            --repo "$REPO" \
+            --state open \
+            --json number,title,updatedAt,labels \
+            --limit 200 \
+            --jq --arg threshold "$THRESHOLD_14" --arg skip "$SKIP_LABELS" '
+              [ .[]
+                | select(.updatedAt < $threshold)
+                | select(.labels | map(.name) | join(",") | test($skip) | not)
+              ]
+              | sort_by(.updatedAt)
+              | .[]
+              | "- #\(.number) \(.title)（\(.updatedAt | split("T")[0])）"
+            ')
+
+          if [ -z "$STALE_ISSUES" ]; then
+            STALE_SECTION="なし"
+          else
+            STALE_SECTION="$STALE_ISSUES"
+          fi
+
+          # --- 2. Dependabot PR 滞留（7日以上）---
+          STALE_DEPS=$(gh pr list \
+            --repo "$REPO" \
+            --author app/dependabot \
+            --state open \
+            --json number,title,createdAt \
+            --limit 50 \
+            --jq --arg threshold "$THRESHOLD_7" '
+              [ .[]
+                | select(.createdAt < $threshold)
+              ]
+              | sort_by(.createdAt)
+              | .[]
+              | "- #\(.number) \(.title)（\(.createdAt | split("T")[0])）"
+            ')
+
+          if [ -z "$STALE_DEPS" ]; then
+            DEPS_SECTION="なし"
+          else
+            DEPS_SECTION="$STALE_DEPS"
+          fi
+
+          # --- 3. Terraform provider バージョン確認 ---
+          # versions.tf から現在のバージョン制約を取得
+          VERSIONS_TF=$(gh api \
+            "repos/$REPO/contents/terraform/envs/local/versions.tf" \
+            --jq '.content | @base64d')
+
+          CURRENT_AWS=$(echo "$VERSIONS_TF" | grep -A2 '"aws"' | grep 'version' | grep -oP '[\d.]+' | head -1 || echo "不明")
+          CURRENT_TF=$(echo "$VERSIONS_TF" | grep 'required_version' | grep -oP '[\d.]+' | head -1 || echo "不明")
+
+          # GitHub Releases から最新バージョンを取得
+          LATEST_AWS=$(gh api repos/hashicorp/terraform-provider-aws/releases/latest --jq '.tag_name' | sed 's/^v//')
+          LATEST_TF=$(gh api repos/hashicorp/terraform/releases/latest --jq '.tag_name' | sed 's/^v//')
+
+          VERSION_SECTION="- hashicorp/aws provider: 現在 \`${CURRENT_AWS}\` → 最新 \`${LATEST_AWS}\`
+          - Terraform: 現在 \`${CURRENT_TF}\` → 最新 \`${LATEST_TF}\`"
+
+          # --- レポートを issue #63 にコメント ---
+          gh issue comment 63 \
+            --repo "$REPO" \
+            --body "## 週次ヘルスチェック（${TODAY}）
+
+          ### 滞留 issue（14日以上更新なし）
+
+          ${STALE_SECTION}
+
+          ### Dependabot PR 滞留（7日以上）
+
+          ${DEPS_SECTION}
+
+          ### Terraform バージョン
+
+          ${VERSION_SECTION}"
