@@ -40,7 +40,7 @@ jobs:
             --remove-label auto-merge-approved \
             --remove-label needs-human-review || true
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         if: steps.check.outputs.enabled == 'true'
 
       - name: Dependabot PRをレビュー
