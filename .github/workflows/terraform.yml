@@ -32,7 +32,7 @@ jobs:
         with:
           tflint_version: latest
       - name: tflintプラグインキャッシュ
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.tflint.d
           key: tflint-${{ runner.os }}-${{ hashFiles('.tflint.hcl') }}
@@ -79,7 +79,7 @@ jobs:
         with:
           terraform_version: "1.15.6"
       - name: Terraformプロバイダキャッシュ
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ env.TF_PLUGIN_CACHE_DIR }}
           key: terraform-providers-1.15.6-${{ runner.os }}-${{ hashFiles('terraform/**/.terraform.lock.hcl', 'terraform/**/versions.tf') }}
@@ -118,7 +118,7 @@ jobs:
           terraform_version: "1.15.6"
 
       - name: Terraformプロバイダキャッシュ
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ env.TF_PLUGIN_CACHE_DIR }}
           key: terraform-providers-1.15.6-${{ runner.os }}-${{ hashFiles('terraform/**/.terraform.lock.hcl', 'terraform/**/versions.tf') }}
