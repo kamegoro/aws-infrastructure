@@ -1,24 +1,20 @@
 name: Dependabot Auto Merge
 
 on:
-  pull_request:
-    types: [labeled]
   workflow_run:
     workflows: ["Terraform"]
     types: [completed]
 
 jobs:
   auto-merge:
-    # claude-code-actionは使用しない(LLMの判断ではなく、ラベルとCI結果のみで
-    # 機械的にマージ可否を決定する)。トリガーは以下の2パターン:
-    # - dependabot-review.ymlがauto-merge-approvedラベルを付与した直後
-    # - PRのTerraform CIが完了した直後(ラベル付与がCI完了より先行していた場合に拾う)
-    if: |
-      (github.event_name == 'pull_request' && github.event.label.name == 'auto-merge-approved') ||
-      github.event_name == 'workflow_run'
+    # claude-code-actionは使用しない(LLMの判断ではなく、PR作成者とCI結果のみで
+    # 機械的にマージ可否を決定する)。workflow_runはDependabot作成のPRに対しても
+    # base repoコンテキストで実行されるため、GITHUB_TOKENの権限がpull_requestの
+    # ように制限されない(#177)。
+    if: github.event_name == 'workflow_run'
     runs-on: ubuntu-latest
     concurrency:
-      group: dependabot-auto-merge-${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || github.event.workflow_run.id }}
+      group: dependabot-auto-merge-${{ github.event.workflow_run.pull_requests[0].number || github.event.workflow_run.id }}
       cancel-in-progress: false
     permissions:
       contents: write
@@ -37,11 +33,7 @@ jobs:
         id: pr
         if: steps.check.outputs.enabled == 'true'
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            number="${{ github.event.pull_request.number }}"
-          else
-            number="${{ github.event.workflow_run.pull_requests[0].number }}"
-          fi
+          number="${{ github.event.workflow_run.pull_requests[0].number }}"
           if [ -z "$number" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
@@ -58,34 +50,23 @@ jobs:
         run: |
           set -e
 
-          # 1. Dependabotが作成したPRであることを再確認する
-          #    (auto-merge-approvedラベルが手動で他のPRに付与された場合でも、
-          #    このjobがcontents: writeでマージを実行する対象を限定する)
+          # 1. Dependabotが作成したPRであることを確認する
+          #    (このjobはcontents: writeでマージを実行するため、対象を限定する)
           author=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json author -q '.author.login')
           if [ "$author" != "dependabot[bot]" ]; then
             echo "Dependabot以外のPR(author=$author)のため対象外"
             exit 0
           fi
 
-          # 2. ラベルを確認する
-          labels=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json labels -q '[.labels[].name] | join(",")')
-          echo "labels=$labels"
-          case ",$labels," in
-            *,auto-merge-approved,*) ;;
-            *) echo "auto-merge-approvedラベルが無いため対象外"; exit 0 ;;
-          esac
-          case ",$labels," in
-            *,needs-human-review,*) echo "needs-human-reviewが付与されているため対象外"; exit 0 ;;
-          esac
-
-          # 3. draft PRは対象外
+          # 2. draft PRは対象外
           is_draft=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json isDraft -q '.isDraft')
           if [ "$is_draft" = "true" ]; then
             echo "draft PRのため対象外"
             exit 0
           fi
 
-          # 4. CIの結果を確認する
+          # 3. CIの結果を確認する(バージョンの種類や内容は判定しない。
+          #    メジャーバージョンアップも含め、CIが全passならマージする)
           buckets=$(gh pr checks "$PR_NUMBER" --repo "$REPO" --json bucket -q '.[].bucket')
           echo "check buckets:"
           echo "$buckets"
