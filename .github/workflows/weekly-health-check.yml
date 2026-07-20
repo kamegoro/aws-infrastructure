@@ -25,7 +25,7 @@ jobs:
           THRESHOLD_7=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-7d +%Y-%m-%dT%H:%M:%SZ)
 
           # --- 1. 滞留issue（14日以上更新なし、自動化ラベルを除外）---
-          SKIP_LABELS="claude-ready|auto-merge-approved|needs-human-review|reviewed-by-claude"
+          SKIP_LABELS="claude-ready|needs-human-review|reviewed-by-claude"
           STALE_ISSUES=$(gh issue list \
             --repo "$REPO" \
             --state open \

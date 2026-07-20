@@ -35,9 +35,6 @@
   color: "c2e0c6"
 
 # 状態 (issue #63 の自動化workflowが使用する)
-- name: auto-merge-approved
-  description: Claudeのレビューにより自動マージを承認(#66)
-  color: "0e8a16"
 - name: needs-human-review
   description: 人間によるレビューが必要
   color: "d93f0b"
