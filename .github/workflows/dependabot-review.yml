@@ -1,7 +1,12 @@
 name: Dependabot PR Review
 
 on:
-  pull_request:
+  # pull_requestのままだとDependabot作成PRはfork PR相当の制限コンテキストで
+  # 実行され、GITHUB_TOKEN以外のsecretsが渡らずCLAUDE_CODE_OAUTH_TOKENが
+  # 空になる(#177)。pull_request_targetはbase repoコンテキストで実行され
+  # secretsにアクセスできる。デフォルトのcheckoutはPRのhead refではなく
+  # base refのため、PRの中身(コード)が実行されることはない。
+  pull_request_target:
     types: [opened, synchronize]
 
 jobs:
