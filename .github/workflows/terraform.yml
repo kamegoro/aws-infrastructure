@@ -11,12 +11,17 @@ on:
       - "terraform/**"
       - ".github/workflows/terraform.yml"
 
+permissions:
+  contents: read
+
 jobs:
   fmt:
     name: terraform fmt
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "1.15.6"
@@ -28,6 +33,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version: latest
@@ -48,6 +55,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: tfsecをインストール
         run: |
           curl -sSL "https://github.com/aquasecurity/tfsec/releases/download/v1.28.14/tfsec-linux-amd64" -o /usr/local/bin/tfsec
@@ -75,6 +84,8 @@ jobs:
       TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "1.15.6"
@@ -113,6 +124,8 @@ jobs:
       TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "1.15.6"
