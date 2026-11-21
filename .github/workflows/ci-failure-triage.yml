@@ -5,13 +5,19 @@ on:
     workflows: ["Terraform"]
     types: [completed]
 
+permissions:
+  contents: read
+
 jobs:
   triage:
-    # mainブランチでのCI失敗のみを対象とする(PRのWIP中の失敗で
-    # Issueが量産されるのを避けるため)
+    # mainブランチへのpushでのCI失敗のみを対象とする(PRのWIP中の失敗で
+    # Issueが量産されるのを避けるため。forkの`main`ブランチからのPRも
+    # head_branch == 'main'になるため、event/head_repositoryでも絞り込む)
     if: |
       github.event.workflow_run.conclusion == 'failure' &&
-      github.event.workflow_run.head_branch == 'main'
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
     concurrency:
       group: ci-failure-triage-${{ github.event.workflow_run.id }}
@@ -25,8 +31,11 @@ jobs:
       # 登録するまで未登録のため、未登録の間はこのジョブをno-opにしてCIを失敗させない
       - name: 自動化の有効化チェック
         id: check
+        env:
+          CLAUDE_AUTOMATION_ENABLED: ${{ vars.CLAUDE_AUTOMATION_ENABLED }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
-          if [ "${{ vars.CLAUDE_AUTOMATION_ENABLED }}" = "false" ] || [ -z "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
+          if [ "$CLAUDE_AUTOMATION_ENABLED" = "false" ] || [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
             echo "enabled=false" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=true" >> "$GITHUB_OUTPUT"
@@ -34,6 +43,8 @@ jobs:
 
       - uses: actions/checkout@v7
         if: steps.check.outputs.enabled == 'true'
+        with:
+          persist-credentials: false
 
       - name: 失敗したCIを調査してIssueを起票
         if: steps.check.outputs.enabled == 'true'

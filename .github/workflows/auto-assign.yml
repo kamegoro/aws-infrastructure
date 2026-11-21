@@ -6,6 +6,9 @@ on:
   pull_request_target:
     types: [opened]
 
+permissions:
+  contents: read
+
 jobs:
   assign:
     name: assigneeを自動設定
