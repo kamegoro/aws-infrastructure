@@ -30,10 +30,14 @@ issue-to-PR（#68）、セカンドレビュー（#70）などのworkflowを段�
    - **例外2**: `.github/workflows/claude-issue-to-pr.yml`（#68）は
      issueの実装・ブランチpush・PR作成のために`contents: write`を
      claude-code-actionに直接付与する。以下で影響範囲を限定する。
-     - `claude-ready`ラベル付与（write権限が必要）のみで起動する
-     - `--disallowedTools`で`terraform apply`/`destroy`、
-       `gh pr merge`/`close`、`gh secret`、`main`への直接push・
-       force pushを禁止する
+     - `claude-ready`ラベル付与（write権限が必要）のみで起動し、
+       さらにissueの作成者が`OWNER`の場合に限定する（公開リポジトリで
+       第三者が書いたissue本文によるプロンプトインジェクションを防ぐ）
+     - `--allowedTools`の許可リストで、使えるツールを編集・
+       `claude/*`ブランチへのpush・`terraform fmt`/`validate`・`tflint`・
+       issue/PRの作成と編集に限定する。禁止リスト（`--disallowedTools`）
+       だけでは`gh api`経由のマージや`curl`による外部送信を防げないため、
+       許可リスト方式を基本とし、禁止リストは多重防御として残す
      - プロンプトで「`main`に直接コミットしない」
        「作成したPRは自分でマージ・承認しない」ことを明示する
      - 作成されたPRには`needs-human-review`を付与し、
@@ -81,7 +85,8 @@ issue-to-PR（#68）、セカンドレビュー（#70）などのworkflowを段�
    - **`claude-ready`ラベルによる発火対象の限定**（#126）: `claude.yml`
      （`@claude`メンション応答）は、issue/PRに`claude-ready`ラベルが
      付与されている場合のみ発火する。これにより、kamegoroが意図した
-     issue/PRのみでOAuthトークンが消費される。
+     issue/PRのみでOAuthトークンが消費される。加えて、発火元の
+     コメント・レビュー・issueの作成者が`OWNER`である場合に限定する。
    - **`--max-turns`によるターン数上限**（#126）: claude-code-actionを
      使う各workflowには`claude_args`で`--max-turns`を設定し、1回の
      実行が消費するトークン量に上限を設ける。
