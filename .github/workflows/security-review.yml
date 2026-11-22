@@ -6,6 +6,9 @@ on:
       - "terraform/**"
       - ".github/workflows/security-review.yml"
 
+permissions:
+  contents: read
+
 jobs:
   security-review:
     # draft PRと、fork PRのsecrets無しケースは対象外
@@ -21,8 +24,11 @@ jobs:
     steps:
       - name: 自動化の有効化チェック
         id: check
+        env:
+          CLAUDE_AUTOMATION_ENABLED: ${{ vars.CLAUDE_AUTOMATION_ENABLED }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
-          if [ "${{ vars.CLAUDE_AUTOMATION_ENABLED }}" = "false" ] || [ -z "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
+          if [ "$CLAUDE_AUTOMATION_ENABLED" = "false" ] || [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
             echo "enabled=false" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=true" >> "$GITHUB_OUTPUT"
@@ -32,6 +38,7 @@ jobs:
         if: steps.check.outputs.enabled == 'true'
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
           fetch-depth: 2
 
       - name: TerraformのセキュリティレビューをClaudeで実行

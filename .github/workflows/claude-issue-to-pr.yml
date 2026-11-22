@@ -4,11 +4,18 @@ on:
   issues:
     types: [labeled]
 
+permissions:
+  contents: read
+
 jobs:
   implement:
     # claude-readyラベルが付与された時のみ起動する。
     # ラベル付与にはwrite権限が必要なため、kamegoroが意図したissueのみが対象になる。
-    if: github.event.label.name == 'claude-ready'
+    # さらにissue本文自体を第三者が書いたものは対象外にする（公開リポジトリのため、
+    # 本文に仕込まれたプロンプトインジェクションでwrite権限のClaudeが動くのを防ぐ）。
+    if: |
+      github.event.label.name == 'claude-ready' &&
+      github.event.issue.author_association == 'OWNER'
     runs-on: ubuntu-latest
     # claude.ymlと同じグループ名にすることで、同一issueに対する
     # @claudeメンション応答とissue-to-PRの実行が同時に走らないようにする
@@ -25,8 +32,11 @@ jobs:
       # 登録するまで未登録のため、未登録の間はこのジョブをno-opにしてCIを失敗させない
       - name: 自動化の有効化チェック
         id: check
+        env:
+          CLAUDE_AUTOMATION_ENABLED: ${{ vars.CLAUDE_AUTOMATION_ENABLED }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
-          if [ "${{ vars.CLAUDE_AUTOMATION_ENABLED }}" = "false" ] || [ -z "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
+          if [ "$CLAUDE_AUTOMATION_ENABLED" = "false" ] || [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
             echo "enabled=false" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=true" >> "$GITHUB_OUTPUT"
@@ -42,6 +52,7 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: |
             --max-turns 50
+            --allowedTools "Read,Glob,Grep,Edit,Write,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git add:*),Bash(git commit:*),Bash(git checkout -b claude/*),Bash(git switch -c claude/*),Bash(git push -u origin claude/*),Bash(git push origin claude/*),Bash(terraform fmt:*),Bash(terraform validate:*),Bash(terraform init -backend=false:*),Bash(tflint:*),Bash(gh issue view:*),Bash(gh issue create:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh pr create:*),Bash(gh pr edit:*),Bash(gh pr view:*)"
             --disallowedTools "Bash(terraform apply:*),Bash(terraform destroy:*),Bash(gh pr merge:*),Bash(gh pr close:*),Bash(gh issue close:*),Bash(gh repo:*),Bash(gh secret:*),Bash(gh label delete:*),Bash(git push:* -f*),Bash(git push:* --force*),Bash(git push origin main*),Bash(git push origin HEAD:main*)"
           prompt: |
             issue #${{ github.event.issue.number }} の `claude-ready` ラベルが
